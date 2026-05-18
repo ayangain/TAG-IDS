@@ -1,4 +1,4 @@
-0,"execCode(h10, root): CVE-2020-26139",AND,0.1
+0,"execCode(h10, root): CVE-2020-26139",AND,0
 1,"execCode(h7, root): CVE-2020-13777",AND,0
 2,"execCode(h7, root): CVE-2021-20294",AND,0
 3,"execCode(h8, root): CVE-2021-20226",AND,0

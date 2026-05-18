@@ -1,3 +1,3 @@
-0,"execCode(h1, root): CVE-2021-44228",AND,0.1
+0,"execCode(h1, root): CVE-2021-44228",AND,0
 1,"execCode(h2, root): CVE-2021-1235",AND,0
 2,"execCode(h3, root): CVE-2020-12625",AND,0
