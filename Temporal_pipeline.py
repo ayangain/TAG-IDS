@@ -5,6 +5,7 @@ import json
 import pandas as pd
 import datetime
 import random
+import shutil
 from pathlib import Path
 from enum import Enum
 import glob
@@ -14,6 +15,12 @@ BASE_DIR = Path.cwd().resolve()
 os.chdir(BASE_DIR)
 IDS_OUTPUT_DIR = BASE_DIR / "ids_outputs"
 IDS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+# The converter reads from backup_originals once it exists, so stale backups can
+# overwrite a fresh pipeline run. Treat these graph CSVs as generated artifacts.
+shutil.rmtree(BASE_DIR / "backup_originals", ignore_errors=True)
+for csv_file in list(BASE_DIR.glob("ARCS_T*.CSV")) + list(BASE_DIR.glob("VERTICES_T*.CSV")):
+    csv_file.unlink(missing_ok=True)
 
 CVE_DATABASE = {
     "httpd": [
@@ -290,6 +297,7 @@ for i in range(1, total_hosts + 1):
     host_cves[f"h{i}"] = []
 
 host_idx = 1
+next_vertex_id = 0
 for t in range(1, time_windows + 1):
     print(f"TIME WINDOW T{t}: ", end="")
     num_hosts_this_window = hosts_per_window_dist[t - 1]
@@ -326,29 +334,24 @@ for t in range(1, time_windows + 1):
     except Exception:
         pass
 
-    # Generate CSVs
+    # Generate one graph vertex per host. CVEs stay in the IDS mapping and are
+    # summarized in the label so graph node count matches host count.
     vertices = {}
     arcs = []
 
-    if os.path.exists("trace_output.P"):
-        try:
-            with open("trace_output.P", "r") as f:
-                content = f.read()
-            for match in re.finditer(r"attackTrace\((\d+), \"([^\"]*)\"\)", content):
-                vertices[int(match.group(1))] = match.group(2)
-            for match in re.finditer(r"edge\((\d+), (\d+)\)", content):
-                arcs.append((int(match.group(1)), int(match.group(2))))
-        except Exception:
-            pass
+    for host in sorted(active_hosts):
+        cve_summary = " ".join(host_cves[host])
+        vertices[next_vertex_id] = f"execCode({host}, root): {cve_summary}"
+        next_vertex_id += 1
 
-    if not vertices:
-        node_id = 0
-        for host in sorted(active_hosts):
-            for idx, cve_id in enumerate(host_cves[host]):
-                vertices[node_id] = f"execCode({host}, root): {cve_id}"
-                if node_id > 0:
-                    arcs.append((node_id - 1, node_id))
-                node_id += 1
+    if len(vertices) > 1:
+        vertex_ids = list(vertices.keys())
+        existing_edges = set(arcs)
+        for from_id, to_id in zip(sorted(vertex_ids), sorted(vertex_ids)[1:]):
+            edge = (from_id, to_id)
+            if edge not in existing_edges:
+                arcs.append(edge)
+                existing_edges.add(edge)
 
     with open(f"VERTICES_T{t}.CSV", "w") as f:
         for vid in sorted(vertices.keys()):
