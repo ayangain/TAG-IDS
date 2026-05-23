@@ -265,46 +265,73 @@ total_hosts = int(input("Enter total number of hosts (default: 10): ") or 10)
 time_windows = int(input("Enter number of time windows (default: 4): ") or 4)
 
 min_hosts_per_window = 3
-if time_windows > total_hosts:
-    time_windows = total_hosts
-
-max_windows = max(1, total_hosts // min_hosts_per_window)
-if time_windows > max_windows:
-    time_windows = max_windows
+time_windows = max(1, time_windows)
 
 print(f"✓ Configuration: {total_hosts} total hosts across {time_windows} time windows")
 
-hosts_per_window_dist = []
-remaining_hosts = total_hosts
+all_hosts = [f"h{i}" for i in range(1, total_hosts + 1)]
+host_vertex_ids = {host: idx for idx, host in enumerate(all_hosts)}
+min_active_hosts = min(min_hosts_per_window, total_hosts)
+max_active_hosts = max(min_active_hosts, min(total_hosts, round(total_hosts * 0.75)))
+
+active_hosts_by_window = []
+previous_active_hosts = set()
+covered_hosts = set()
+
 for i in range(time_windows):
     remaining_windows = time_windows - i
-    if i == time_windows - 1:
-        hosts_per_window_dist.append(remaining_hosts)
-    else:
-        min_for_remaining = min_hosts_per_window * (remaining_windows - 1)
-        max_for_this = remaining_hosts - min_for_remaining
-        if max_for_this < min_hosts_per_window:
-            max_for_this = min_hosts_per_window
-        num_for_this_window = random.randint(min_hosts_per_window, max_for_this)
-        hosts_per_window_dist.append(num_for_this_window)
-        remaining_hosts -= num_for_this_window
+    unseen_hosts = set(all_hosts) - covered_hosts
+    min_new_hosts = (len(unseen_hosts) + remaining_windows - 1) // remaining_windows
+    target_count = random.randint(min_active_hosts, max_active_hosts)
+    target_count = min(total_hosts, max(target_count, min_new_hosts))
 
-print(f"✓ Distribution: {hosts_per_window_dist} (Total: {sum(hosts_per_window_dist)})\n")
+    max_retained = max(0, target_count - min_new_hosts)
+    if previous_active_hosts and max_retained:
+        retain_min = min(max_retained, max(1, round(len(previous_active_hosts) * 0.5)))
+        retain_max = min(len(previous_active_hosts), max_retained)
+        retain_count = random.randint(retain_min, retain_max) if retain_max >= retain_min else retain_max
+        retained_hosts = set(random.sample(sorted(previous_active_hosts), retain_count))
+    else:
+        retained_hosts = set()
+
+    slots = target_count - len(retained_hosts)
+    new_count = min(len(unseen_hosts), slots, max(min_new_hosts, 0))
+    new_hosts = set(random.sample(sorted(unseen_hosts), new_count)) if new_count else set()
+
+    slots = target_count - len(retained_hosts) - len(new_hosts)
+    available_returning_hosts = set(all_hosts) - retained_hosts - new_hosts
+    returning_count = min(slots, len(available_returning_hosts))
+    returning_hosts = (
+        set(random.sample(sorted(available_returning_hosts), returning_count))
+        if returning_count
+        else set()
+    )
+
+    active_hosts = retained_hosts | new_hosts | returning_hosts
+    active_hosts_by_window.append(active_hosts)
+    covered_hosts.update(active_hosts)
+    previous_active_hosts = active_hosts
+
+hosts_per_window_dist = [len(hosts) for hosts in active_hosts_by_window]
+print(f"✓ Active hosts per window: {hosts_per_window_dist}")
+print(f"✓ Unique hosts scheduled across all windows: {len(covered_hosts)}\n")
 
 host_cves = {}
 seen_hosts = set()
 for i in range(1, total_hosts + 1):
     host_cves[f"h{i}"] = []
 
-host_idx = 1
-next_vertex_id = 0
 for t in range(1, time_windows + 1):
     print(f"TIME WINDOW T{t}: ", end="")
-    num_hosts_this_window = hosts_per_window_dist[t - 1]
-    active_hosts = set([f"h{i}" for i in range(host_idx, host_idx + num_hosts_this_window)])
-    host_idx += num_hosts_this_window
+    active_hosts = active_hosts_by_window[t - 1]
     seen_hosts.update(active_hosts)
     print(f"{sorted(active_hosts)}")
+    previous_window_hosts = active_hosts_by_window[t - 2] if t > 1 else set()
+    turned_on_hosts = active_hosts - previous_window_hosts
+    turned_off_hosts = previous_window_hosts - active_hosts
+    print(f"  Turned on/returned: {sorted(turned_on_hosts)}")
+    if t > 1:
+        print(f"  Turned off: {sorted(turned_off_hosts)}")
 
     for host in sorted(active_hosts):
         if not host_cves[host]:
@@ -341,8 +368,7 @@ for t in range(1, time_windows + 1):
 
     for host in sorted(active_hosts):
         cve_summary = " ".join(host_cves[host])
-        vertices[next_vertex_id] = f"execCode({host}, root): {cve_summary}"
-        next_vertex_id += 1
+        vertices[host_vertex_ids[host]] = f"execCode({host}, root): {cve_summary}"
 
     if len(vertices) > 1:
         vertex_ids = list(vertices.keys())

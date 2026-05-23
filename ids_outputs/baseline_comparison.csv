@@ -1,0 +1,11 @@
+baseline,total_pairs,tag_valid,tag_impossible,tag_ambiguous,correlated_predicted,false_corr_count,false_corr_rate_pct,missed_chain_count,missed_chain_rate_pct,precision,recall,f1_score,note
+time_15min,70,18,28,24,33,12,36.4,8,44.4,0.455,0.556,0.5,
+time_30min,70,18,28,24,46,16,34.8,4,22.2,0.467,0.778,0.583,
+time_60min,70,18,28,24,60,23,38.3,3,16.7,0.395,0.833,0.536,
+time_120min,70,18,28,24,70,28,40.0,0,0.0,0.391,1.0,0.562,
+same_window,70,18,28,24,29,6,20.7,7,38.9,0.647,0.611,0.629,
+severity_gte_LOW,70,18,28,24,70,28,40.0,0,0.0,0.391,1.0,0.562,
+severity_gte_MEDIUM,70,18,28,24,70,28,40.0,0,0.0,0.391,1.0,0.562,
+severity_gte_HIGH,70,18,28,24,70,28,40.0,0,0.0,0.391,1.0,0.562,
+severity_gte_CRITICAL,70,18,28,24,0,0,0.0,18,100.0,0.0,0.0,0.0,
+TAG_IDS (ours),70,18,28,24,18,0,0.0,0,0.0,1.0,1.0,1.0,TAG resolves 65.7% of pairs; 24 ambiguous (34.3%)
