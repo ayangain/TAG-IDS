@@ -2881,5 +2881,96 @@ def main():
     print_comparison(comparison_df)
     print_key_findings(comparison_df, tag_df)
 
+def print_consolidated_summary():
+    print("\n" + "=" * 72)
+    print("  CONSOLIDATED OUTPUT SUMMARY")
+    print("=" * 72)
+
+
+def run_with_output_capture(output_path):
+    import sys
+    import contextlib
+
+    class _Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+
+        def write(self, data):
+            for stream in self.streams:
+                stream.write(data)
+
+        def flush(self):
+            for stream in self.streams:
+                stream.flush()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w") as f:
+        tee_out = _Tee(sys.stdout, f)
+        tee_err = _Tee(sys.stderr, f)
+        with contextlib.redirect_stdout(tee_out), contextlib.redirect_stderr(tee_err):
+            main()
+            print_consolidated_summary()
+
+    print(f"Output saved to {output_path}")
+
+    ids_dir = Path(".").resolve() / "ids_outputs"
+    summary_lines = []
+
+    summary_csv = ids_dir / "alert_chain_summary.csv"
+    if summary_csv.exists():
+        df = pd.read_csv(summary_csv)
+        if not df.empty:
+            row = df.iloc[0]
+            summary_lines.append(
+                f"Alert chains: total_pairs={int(row.get('total_pairs', 0))} "
+                f"valid={int(row.get('valid_count', 0))} "
+                f"impossible={int(row.get('impossible_count', 0))} "
+                f"ambiguous={int(row.get('ambiguous_count', 0))}"
+            )
+
+    blind_csv = ids_dir / "blind_spot_per_window.csv"
+    if blind_csv.exists():
+        df = pd.read_csv(blind_csv)
+        if not df.empty:
+            avg_bs = df["blind_spot_ratio_pct"].mean()
+            avg_cov = df["coverage_pct"].mean()
+            summary_lines.append(
+                f"Blind spots: avg_blind_spot_ratio={avg_bs:.1f}% "
+                f"avg_coverage={avg_cov:.1f}%"
+            )
+
+    triage_csv = ids_dir / "triage_summary.csv"
+    if triage_csv.exists():
+        df = pd.read_csv(triage_csv)
+        if not df.empty:
+            row = df.iloc[0]
+            summary_lines.append(
+                f"Triage: total_alerts={int(row.get('total_alerts', 0))} "
+                f"promoted={int(row.get('promoted_count', 0))} "
+                f"demoted={int(row.get('demoted_count', 0))}"
+            )
+
+    baseline_csv = ids_dir / "baseline_comparison.csv"
+    if baseline_csv.exists():
+        df = pd.read_csv(baseline_csv)
+        if not df.empty:
+            non_tag = df[~df["baseline"].astype(str).str.contains("TAG")]
+            if not non_tag.empty:
+                best = non_tag.loc[non_tag["f1_score"].idxmax()]
+                summary_lines.append(
+                    f"Baselines: best={best['baseline']} "
+                    f"F1={best['f1_score']} "
+                    f"FCR={best['false_corr_rate_pct']}% "
+                    f"MCR={best['missed_chain_rate_pct']}%"
+                )
+
+    if not summary_lines:
+        summary_lines.append("No summary outputs found in ids_outputs.")
+
+    for line in summary_lines:
+        print(f"  - {line}")
+
+    print("=" * 72)
+
 if __name__ == "__main__":
-    main()
+    run_with_output_capture(Path("ids_outputs") / "run_output.txt")

@@ -1,2 +1,2 @@
 total_alerts,promoted_count,demoted_count,promoted_pct,demoted_pct,cvss_sts_correlation,mean_sts,mean_cvss,weight_severity,weight_betweenness,weight_path_critical,weight_persistence,weight_blind_spot_penalty
-114,24,74,21.1,64.9,0.476,0.419,0.711,0.25,0.25,0.2,0.15,0.15
+87,16,52,18.4,59.8,0.537,0.413,0.681,0.25,0.25,0.2,0.15,0.15

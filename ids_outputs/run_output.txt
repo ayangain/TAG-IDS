@@ -1,0 +1,68 @@
+==========================================================
+  Baseline Comparator for Idea 3
+==========================================================
+
+[1/5] Loading data...
+  OK Raw alerts          : 87
+  OK TAG-classified pairs: 55
+  OK TAG valid           : 9
+  OK TAG impossible      : 35
+  OK TAG ambiguous       : 11
+
+[2/5] Running baselines...
+  OK Baselines defined   : 9
+
+[3/5] Computing metrics...
+
+[4/5] Building pair-level detail table...
+
+[5/5] Saving results...
+  OK Comparison table    : /Users/ayangain/repos/ProgrammaticalTAG/TAG/ids_outputs/baseline_comparison.csv
+  OK Pair detail table   : /Users/ayangain/repos/ProgrammaticalTAG/TAG/ids_outputs/baseline_pair_detail.csv
+
+================================================================================
+  BASELINE COMPARISON TABLE
+  (TAG VALID = ground truth positive; TAG IMPOSSIBLE = ground truth negative)
+================================================================================
+
+  Baseline                              Corr   FCR%   MCR%    Prec     Rec      F1
+  ------------------------------------------------------------------------------
+  time_15min                              13   69.2   88.9   0.100   0.111   0.105
+  time_30min                              27   59.3   44.4   0.238   0.556   0.333
+  time_60min                              41   63.4   22.2   0.212   0.778   0.333
+  time_120min                             54   63.0    0.0   0.209   1.000   0.346
+  same_window                             11   45.5   66.7   0.375   0.333   0.353
+  severity_gte_LOW                        55   63.6    0.0   0.205   1.000   0.340
+  severity_gte_MEDIUM                     44   68.2   44.4   0.143   0.556   0.227
+  severity_gte_HIGH                       26   57.7   55.6   0.211   0.444   0.286
+  severity_gte_CRITICAL                    2   50.0  100.0   0.000   0.000   0.000
+  TAG_IDS (ours)                           9    0.0    0.0   1.000   1.000   1.000 <
+
+  FCR = False Correlation Rate: % of CORRELATED predictions TAG says are IMPOSSIBLE
+  MCR = Missed Chain Rate     : % of TAG-VALID chains baseline marks NOT_CORRELATED
+================================================================================
+
+================================================================================
+  KEY FINDINGS
+================================================================================
+
+  1. Of 55 consecutive alert pairs, only 9 (16.4%)
+     are structurally valid attack chains according to the TAG.
+
+  2. 35 pairs (63.6%) are structurally IMPOSSIBLE -
+     a standard correlator would incorrectly link these.
+
+  3. 11 pairs (20.0%) are ambiguous (path exists
+     but temporal ordering violated - potential detection lag).
+
+  4. Best baseline: same_window
+     FCR=45.5%  MCR=66.7%  F1=0.353
+
+  5. TAG-IDS reduces false correlation rate to 0% by design,
+     while identifying the 11 ambiguous cases as a third
+     class that no baseline can distinguish.
+================================================================================
+
+========================================================================
+  CONSOLIDATED OUTPUT SUMMARY
+========================================================================
