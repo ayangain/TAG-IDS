@@ -20,6 +20,22 @@ os.chdir(BASE_DIR)
 IDS_OUTPUT_DIR = BASE_DIR / "ids_outputs"
 IDS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+WINDOW_POLICY = "first"  # Options: first, last, most_frequent
+
+def pick_tag_window(windows, policy):
+    if not windows:
+        return None
+    if policy == "last":
+        return sorted(windows)[-1]
+    if policy == "most_frequent":
+        counts = {}
+        for w in windows:
+            counts[w] = counts.get(w, 0) + 1
+        max_count = max(counts.values())
+        candidates = [w for w, c in counts.items() if c == max_count]
+        return sorted(candidates)[0]
+    return sorted(windows)[0]
+
 shutil.rmtree(BASE_DIR / "backup_originals", ignore_errors=True)
 for csv_file in list(BASE_DIR.glob("ARCS_T*.CSV")) + list(BASE_DIR.glob("VERTICES_T*.CSV")):
     csv_file.unlink(missing_ok=True)
@@ -1350,26 +1366,23 @@ def load_data():
     print(f"  OK Hosts with CVEs     : {len(host_cves_map)}")
     return alerts_df, host_cves_map
 
-def assign_time_windows(alerts_df):
-    print("\n[2/6] Recovering time windows from timestamps...")
-    base_time = alerts_df["timestamp"].min()
+def assign_time_windows(alerts_df, host_windows):
+    print("\n[2/6] Assigning time windows from TAG windows...")
     df = alerts_df.copy()
-    df["hour_offset"] = (
-        (df["timestamp"] - base_time)
-        .dt.total_seconds()
-        .div(3600)
-        .apply(math.floor)
-    )
-    sorted_offsets   = sorted(df["hour_offset"].unique())
-    offset_to_window = {off: f"T{i+1}" for i, off in enumerate(sorted_offsets)}
-    df["time_window"] = df["hour_offset"].map(offset_to_window)
-    print(f"  OK Windows detected    : {list(offset_to_window.values())}")
-    print(f"  OK Alerts per window   :\n{df['time_window'].value_counts().sort_index().to_string()}")
+
+    def _pick_window(dest_host):
+        windows = host_windows.get(dest_host, [])
+        return pick_tag_window(windows, WINDOW_POLICY)
+
+    df["time_window"] = df["dest_host"].apply(_pick_window)
+    print(f"  OK TAG windows detected: {sorted({w for ws in host_windows.values() for w in ws})}")
+    print(f"  OK Alerts per window   :\n{df['time_window'].value_counts(dropna=False).sort_index().to_string()}")
     return df
 
 def build_host_node_index():
     print("\n[3/6] Building host->node_id index from VERTICES CSVs...")
     index = {}
+    host_windows = {}
     vertex_files = sorted(BASE_DIR.glob("VERTICES_T*.CSV"))
     if not vertex_files:
         raise FileNotFoundError("No VERTICES_T*.CSV files found. Run Cell 1 first.")
@@ -1383,13 +1396,15 @@ def build_host_node_index():
             label   = str(row["label"])
             hosts   = re.findall(r"\b(h\d+)\b", label)
             if hosts:
-                index[(hosts[0], window)] = node_id
+                host = hosts[0]
+                index[(host, window)] = node_id
+                host_windows.setdefault(host, []).append(window)
 
     print(f"  OK Index entries built : {len(index)}")
     sample = list(index.items())[:5]
     for k, v in sample:
         print(f"    {k} -> node_id {v}")
-    return index
+    return index, host_windows
 
 def map_alerts_to_nodes(alerts_df, host_node_index):
     print("\n[4/6] Mapping alerts to TAG nodes...")
@@ -1400,15 +1415,6 @@ def map_alerts_to_nodes(alerts_df, host_node_index):
         window  = row["time_window"]
         node_id = host_node_index.get((dest, window))
         entry   = row.to_dict()
-
-        if node_id is None:
-            tw_num = int(re.sub(r"\D", "", window))
-            for delta in [1, -1, 2, -2]:
-                fb_key = (dest, f"T{tw_num + delta}")
-                if fb_key in host_node_index:
-                    node_id = host_node_index[fb_key]
-                    window  = fb_key[1]
-                    break
 
         entry["tag_node_id"]     = node_id
         entry["tag_time_window"] = window if node_id is not None else None
@@ -1657,8 +1663,8 @@ def main():
     print("=" * 58)
 
     alerts_df, host_cves_map = load_data()
-    alerts_df                = assign_time_windows(alerts_df)
-    host_node_index          = build_host_node_index()
+    host_node_index, host_windows = build_host_node_index()
+    alerts_df = assign_time_windows(alerts_df, host_windows)
     mapped_df, unmapped_df   = map_alerts_to_nodes(alerts_df, host_node_index)
 
     if mapped_df.empty:
@@ -1761,23 +1767,22 @@ OUT_WINDOW  = IDS_OUTPUT_DIR / "blind_spot_per_window.csv"
 OUT_NODES   = IDS_OUTPUT_DIR / "blind_spot_nodes.csv"
 OUT_DYNAMIC = IDS_OUTPUT_DIR / "dynamic_blind_spots.csv"
 
-def load_alerts():
+def load_alerts(host_index):
     print("\n[1/6] Loading IDS alerts...")
     df = pd.read_csv(ALERTS_CSV, parse_dates=["timestamp"])
 
-    base_time = df["timestamp"].min()
-    df["hour_offset"] = (
-        (df["timestamp"] - base_time)
-        .dt.total_seconds()
-        .div(3600)
-        .apply(math.floor)
-    )
-    sorted_offsets   = sorted(df["hour_offset"].unique())
-    offset_to_window = {off: f"T{i+1}" for i, off in enumerate(sorted_offsets)}
-    df["time_window"] = df["hour_offset"].map(offset_to_window)
+    host_windows = {}
+    for (host, window), _nid in host_index.items():
+        host_windows.setdefault(host, []).append(window)
+
+    def _pick_window(dest_host):
+        windows = host_windows.get(dest_host, [])
+        return pick_tag_window(windows, WINDOW_POLICY)
+
+    df["time_window"] = df["dest_host"].apply(_pick_window)
 
     print(f"  OK Alerts loaded       : {len(df)}")
-    print(f"  OK Windows recovered   : {sorted(df['time_window'].unique())}")
+    print(f"  OK TAG windows         : {sorted({w for ws in host_windows.values() for w in ws})}")
     return df
 
 def build_tag_registry():
@@ -1818,18 +1823,8 @@ def compute_alerted_nodes(alerts_df, host_index, all_windows):
         window = row["time_window"]
         nid    = host_index.get((dest, window))
 
-        if nid is None:
-            tw_num = int(re.sub(r"\D", "", window)) if window else 0
-            for delta in [1, -1, 2, -2]:
-                fb = host_index.get((dest, f"T{tw_num + delta}"))
-                if fb is not None:
-                    for w in all_windows:
-                        if host_index.get((dest, w)) == fb:
-                            alerted[w].add(fb)
-                    break
-        else:
-            if window in alerted:
-                alerted[window].add(nid)
+        if nid is not None and window in alerted:
+            alerted[window].add(nid)
 
     for w in all_windows:
         print(f"  OK {w}: {len(alerted[w])} alerted nodes")
@@ -2122,8 +2117,8 @@ def main():
     print("  Idea 2: Temporal Blind Spot Quantification")
     print("=" * 58)
 
-    alerts_df                         = load_alerts()
     registry, host_index, all_windows = build_tag_registry()
+    alerts_df                         = load_alerts(host_index)
     alerted                           = compute_alerted_nodes(alerts_df, host_index, all_windows)
     path_nodes, _                     = load_path_nodes(all_windows)
     nodes_df                          = classify_nodes(registry, alerted, path_nodes, all_windows)
@@ -2221,20 +2216,21 @@ def load_all_data():
     print(f"  OK Hosts with CVEs     : {len(host_cves_map)}")
     return alerts_df, host_cves_map, blind_df
 
-def assign_time_windows(alerts_df):
-    print("\n[2/7] Recovering time windows...")
-    base_time = alerts_df["timestamp"].min()
+def assign_time_windows(alerts_df, registry):
+    print("\n[2/7] Assigning time windows from TAG windows...")
     df = alerts_df.copy()
-    df["hour_offset"] = (
-        (df["timestamp"] - base_time)
-        .dt.total_seconds()
-        .div(3600)
-        .apply(math.floor)
-    )
-    sorted_offsets   = sorted(df["hour_offset"].unique())
-    offset_to_window = {off: f"T{i+1}" for i, off in enumerate(sorted_offsets)}
-    df["time_window"] = df["hour_offset"].map(offset_to_window)
-    print(f"  OK Windows             : {list(offset_to_window.values())}")
+
+    host_windows = {}
+    for window, nodes in registry.items():
+        for _nid, host in nodes.items():
+            host_windows.setdefault(host, []).append(window)
+
+    def _pick_window(dest_host):
+        windows = host_windows.get(dest_host, [])
+        return pick_tag_window(windows, WINDOW_POLICY)
+
+    df["time_window"] = df["dest_host"].apply(_pick_window)
+    print(f"  OK TAG windows         : {sorted({w for ws in host_windows.values() for w in ws})}")
     return df
 
 def build_tag_graphs():
@@ -2345,12 +2341,6 @@ def compute_sts(alerts_df, registry, bc_per_window,
         sev_raw = str(row.get("severity", "HIGH")).upper()
 
         nid = host_index.get((dest, window))
-        if nid is None:
-            tw_num = int(re.sub(r"\D", "", window)) if window else 1
-            for delta in [1, -1, 2, -2]:
-                nid = host_index.get((dest, f"T{tw_num + delta}"))
-                if nid:
-                    break
 
         c_severity = SEVERITY_MAP.get(sev_raw, 0.75)
 
@@ -2569,9 +2559,9 @@ def main():
     print("=" * 58)
 
     alerts_df, host_cves_map, blind_df = load_all_data()
-    alerts_df = assign_time_windows(alerts_df)
 
     graphs, registry, node_host        = build_tag_graphs()
+    alerts_df = assign_time_windows(alerts_df, registry)
     bc_per_window                      = compute_betweenness_per_window(graphs)
     path_critical_nodes, node_window_count, max_persistence = \
         compute_node_features(graphs, registry)
