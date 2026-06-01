@@ -2582,6 +2582,574 @@ if __name__ == "__main__":
     main()
 
 
+# ===== File: vulnerability_persistence_risk.py =====
+"""
+Cross-Window Vulnerability Persistence Risk
+============================================
+Measures the correlation between CVE persistence duration
+(how many consecutive windows a CVE remains unpatched on a node)
+and that node's structural importance in the TAG.
+
+Core hypothesis:
+  A persistently vulnerable high-centrality node represents
+  chronic risk that static snapshots miss entirely.
+  This is only measurable with a temporal graph.
+
+Three persistence metrics per CVE-host pair:
+  PERSISTENCE_SPAN    : number of consecutive windows the CVE is present
+  PERSISTENCE_STREAK  : longest unbroken consecutive run
+  EXPOSURE_SCORE      : severity-weighted persistence
+
+Three structural metrics per node (from TAG):
+  PATH_CRITICAL       : binary - on a valid attack path
+  PERSISTENCE_WINDOWS : how many windows the node appears in
+  DEGREE_SUM          : total in+out degree summed across windows
+
+Key outputs:
+  1. Per (host, CVE) persistence table
+  2. Correlation between CVE persistence and node centrality
+  3. Chronic risk nodes - high persistence AND high structural importance
+  4. Window-by-window attack surface evolution
+
+Depends on:
+  - ids_outputs/host_cves_mapping.json
+  - VERTICES_T*.CSV  and  ARCS_T*.CSV
+  - ids_outputs/blind_spot_nodes.csv  (optional, from blindspot.py)
+
+Outputs:
+  - ids_outputs/cve_persistence.csv
+  - ids_outputs/chronic_risk_nodes.csv
+  - ids_outputs/persistence_correlation.csv
+  - ids_outputs/attack_surface_evolution.csv
+"""
+
+import re
+import json
+import math
+import warnings
+from pathlib import Path
+from collections import defaultdict
+
+import pandas as pd
+import numpy as np
+import networkx as nx
+from scipy import stats
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
+
+BASE_DIR       = Path(".").resolve()
+IDS_OUTPUT_DIR = BASE_DIR / "ids_outputs"
+
+CVE_MAP_JSON   = IDS_OUTPUT_DIR / "host_cves_mapping.json"
+BLIND_SPOT_CSV = IDS_OUTPUT_DIR / "blind_spot_nodes.csv"
+
+OUT_PERSISTENCE   = IDS_OUTPUT_DIR / "cve_persistence.csv"
+OUT_CHRONIC       = IDS_OUTPUT_DIR / "chronic_risk_nodes.csv"
+OUT_CORRELATION   = IDS_OUTPUT_DIR / "persistence_correlation.csv"
+OUT_EVOLUTION     = IDS_OUTPUT_DIR / "attack_surface_evolution.csv"
+
+SEVERITY_WEIGHT = {"LOW": 0.25, "MEDIUM": 0.50, "HIGH": 0.75, "CRITICAL": 1.00}
+
+CVE_INFO_SEVERITY = {
+    "CVE-2021-44228": "CRITICAL", "CVE-2021-41773": "CRITICAL",
+    "CVE-2020-1938":  "CRITICAL", "CVE-2021-26855": "CRITICAL",
+    "CVE-2019-0604":  "CRITICAL", "CVE-2018-4939":  "CRITICAL",
+    "CVE-2020-5410":  "CRITICAL", "CVE-2021-45046": "HIGH",
+    "CVE-2021-44512": "HIGH",     "CVE-2021-33910": "CRITICAL",
+    "CVE-2021-21224": "HIGH",     "CVE-2020-9488":  "MEDIUM",
+    "CVE-2020-11738": "CRITICAL", "CVE-2021-28169": "CRITICAL",
+    "CVE-2021-28156": "HIGH",     "CVE-2021-28341": "CRITICAL",
+    "CVE-2021-21898": "CRITICAL", "CVE-2021-3129":  "HIGH",
+    "CVE-2021-24410": "MEDIUM",   "CVE-2021-24512": "HIGH",
+    "CVE-2020-14144": "HIGH",     "CVE-2020-14145": "MEDIUM",
+    "CVE-2021-21233": "HIGH",     "CVE-2021-21234": "CRITICAL",
+    "CVE-2021-26858": "CRITICAL", "CVE-2021-27065": "CRITICAL",
+    "CVE-2020-16898": "CRITICAL", "CVE-2021-31166": "HIGH",
+    "CVE-2020-1470":  "CRITICAL", "CVE-2020-15505": "CRITICAL",
+    "CVE-2021-1234":  "MEDIUM",   "CVE-2021-1235":  "HIGH",
+    "CVE-2020-8516":  "CRITICAL", "CVE-2020-8517":  "CRITICAL",
+    "CVE-2021-20225": "CRITICAL", "CVE-2021-20226": "HIGH",
+    "CVE-2020-13933": "MEDIUM",   "CVE-2020-13934": "MEDIUM",
+    "CVE-2021-30129": "HIGH",     "CVE-2021-30130": "HIGH",
+    "CVE-2020-1234":  "HIGH",     "CVE-2020-1235":  "CRITICAL",
+    "CVE-2020-1236":  "HIGH",     "CVE-2021-24497": "MEDIUM",
+    "CVE-2021-24498": "MEDIUM",   "CVE-2021-30132": "HIGH",
+    "CVE-2021-26851": "CRITICAL", "CVE-2021-26852": "HIGH",
+    "CVE-2021-28850": "HIGH",     "CVE-2021-28851": "HIGH",
+    "CVE-2020-25695": "HIGH",     "CVE-2020-25696": "CRITICAL",
+    "CVE-2020-11083": "CRITICAL", "CVE-2020-11084": "HIGH",
+    "CVE-2021-28168": "HIGH",     "CVE-2021-30609": "CRITICAL",
+    "CVE-2021-30610": "HIGH",     "CVE-2020-9614":  "CRITICAL",
+    "CVE-2020-9615":  "HIGH",     "CVE-2021-22556": "CRITICAL",
+    "CVE-2021-22557": "HIGH",     "CVE-2020-11989": "CRITICAL",
+    "CVE-2020-11990": "CRITICAL", "CVE-2021-23840": "HIGH",
+    "CVE-2021-23841": "MEDIUM",   "CVE-2020-14644": "CRITICAL",
+    "CVE-2020-14645": "CRITICAL", "CVE-2021-20294": "HIGH",
+    "CVE-2021-20295": "HIGH",     "CVE-2020-27238": "HIGH",
+    "CVE-2020-27239": "CRITICAL", "CVE-2021-32074": "CRITICAL",
+    "CVE-2021-32075": "HIGH",     "CVE-2021-24514": "HIGH",
+    "CVE-2021-24515": "HIGH",     "CVE-2020-12624": "CRITICAL",
+    "CVE-2020-12625": "HIGH",     "CVE-2020-8554":  "CRITICAL",
+    "CVE-2020-8555":  "HIGH",     "CVE-2021-23879": "HIGH",
+    "CVE-2021-23880": "CRITICAL", "CVE-2020-27240": "HIGH",
+    "CVE-2021-28149": "HIGH",     "CVE-2021-28150": "HIGH",
+    "CVE-2020-5411":  "CRITICAL", "CVE-2021-30133": "HIGH",
+    "CVE-2020-26139": "MEDIUM",   "CVE-2020-26140": "MEDIUM",
+    "CVE-2021-37582": "HIGH",     "CVE-2021-37583": "MEDIUM",
+    "CVE-2020-15999": "HIGH",     "CVE-2020-16000": "HIGH",
+    "CVE-2021-22569": "HIGH",     "CVE-2021-22570": "MEDIUM",
+    "CVE-2020-7960":  "MEDIUM",   "CVE-2020-7961":  "HIGH",
+    "CVE-2021-23214": "HIGH",     "CVE-2021-23215": "MEDIUM",
+    "CVE-2020-8557":  "MEDIUM",   "CVE-2020-8558":  "HIGH",
+    "CVE-2021-24497": "MEDIUM",   "CVE-2021-24498": "MEDIUM",
+    "CVE-2020-16899": "HIGH",     "CVE-2021-28149": "HIGH",
+}
+
+def load_cve_map():
+    print("\n[1/6] Loading CVE mapping...")
+    with open(CVE_MAP_JSON) as f:
+        host_cves_map = json.load(f)
+    print(f"  OK Hosts with CVEs     : {len(host_cves_map)}")
+    return host_cves_map
+
+def load_tag_per_window():
+    print("\n[2/6] Loading TAG structure per window...")
+
+    vertex_files = sorted(BASE_DIR.glob("VERTICES_T*.CSV"))
+    arc_files    = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
+
+    if not vertex_files:
+        raise FileNotFoundError("No VERTICES_T*.CSV found. Run Cell 1 first.")
+
+    host_in_window = {}
+    node_id_map    = {}
+    graphs         = {}
+    registry       = {}
+
+    for vf in vertex_files:
+        window = vf.stem.replace("VERTICES_", "")
+        df     = pd.read_csv(vf, header=None,
+                             names=["node_id", "label", "type", "value"])
+        host_in_window[window] = set()
+        registry[window]       = {}
+        for _, row in df.iterrows():
+            nid   = int(row["node_id"])
+            hosts = re.findall(r"\b(h\d+)\b", str(row["label"]))
+            if hosts:
+                host = hosts[0]
+                host_in_window[window].add(host)
+                node_id_map[(host, window)] = nid
+                registry[window][nid]       = host
+
+    for af in arc_files:
+        window = af.stem.replace("ARCS_", "")
+        df     = pd.read_csv(af, header=None)
+        G      = nx.DiGraph()
+        for nid in registry.get(window, {}).keys():
+            G.add_node(nid)
+        for _, row in df.iterrows():
+            try:
+                G.add_edge(int(row.iloc[1]), int(row.iloc[0]))
+            except (ValueError, IndexError):
+                continue
+        graphs[window] = G
+
+    windows = sorted(host_in_window.keys())
+    for w in windows:
+        g = graphs.get(w, nx.DiGraph())
+        print(f"  OK {w}: {len(host_in_window[w])} hosts, "
+              f"{g.number_of_nodes()} nodes, {g.number_of_edges()} edges")
+
+    return windows, host_in_window, graphs, node_id_map, registry
+
+def compute_cve_persistence(host_cves_map, windows, host_in_window):
+    print("\n[3/6] Computing CVE persistence per host...")
+
+    window_num = {w: int(re.sub(r"\D", "", w)) for w in windows}
+    records    = []
+
+    for host, cves in host_cves_map.items():
+        for cve in cves:
+            severity     = CVE_INFO_SEVERITY.get(cve, "HIGH")
+            sev_weight   = SEVERITY_WEIGHT[severity]
+
+            present_in   = [w for w in windows if host in host_in_window.get(w, set())]
+            if not present_in:
+                continue
+
+            span         = len(present_in)
+            first_w      = present_in[0]
+            last_w       = present_in[-1]
+
+            nums         = sorted([window_num[w] for w in present_in])
+            streak       = 1
+            max_streak   = 1
+            for i in range(1, len(nums)):
+                if nums[i] == nums[i-1] + 1:
+                    streak += 1
+                    max_streak = max(max_streak, streak)
+                else:
+                    streak = 1
+
+            exposure_score = round(sev_weight * span, 4)
+
+            records.append({
+                "host"              : host,
+                "cve_id"            : cve,
+                "severity"          : severity,
+                "severity_weight"   : sev_weight,
+                "presence_windows"  : ",".join(present_in),
+                "persistence_span"  : span,
+                "persistence_streak": max_streak,
+                "first_window"      : first_w,
+                "last_window"       : last_w,
+                "exposure_score"    : exposure_score,
+                "total_windows"     : len(windows),
+                "persistence_ratio" : round(span / len(windows), 3),
+            })
+
+    df = pd.DataFrame(records)
+    print(f"  OK CVE-host pairs tracked : {len(df)}")
+    return df
+
+def compute_structural_importance(graphs, registry, windows):
+    print("\n[4/6] Computing structural importance per node...")
+
+    combined = nx.compose_all(list(graphs.values())) if graphs else nx.DiGraph()
+
+    path_critical = set()
+    nodes_list    = list(combined.nodes())
+    for src in nodes_list:
+        for dst in nodes_list:
+            if src == dst:
+                continue
+            if nx.has_path(combined, src, dst):
+                try:
+                    path = nx.shortest_path(combined, src, dst)
+                    path_critical.update(path)
+                except nx.NetworkXNoPath:
+                    continue
+
+    node_window_count = defaultdict(int)
+    node_degree_sum   = defaultdict(float)
+    node_max_degree   = defaultdict(float)
+
+    for w, G in graphs.items():
+        for nid in G.nodes():
+            deg = G.in_degree(nid) + G.out_degree(nid)
+            node_window_count[nid] += 1
+            node_degree_sum[nid]   += deg
+            node_max_degree[nid]    = max(node_max_degree[nid], deg)
+
+    node_to_host = {}
+    for w, nodes in registry.items():
+        for nid, host in nodes.items():
+            node_to_host[nid] = host
+
+    records = []
+    all_node_ids = set()
+    for w, nodes in registry.items():
+        all_node_ids.update(nodes.keys())
+
+    for nid in all_node_ids:
+        host    = node_to_host.get(nid, f"node_{nid}")
+        n_wins  = node_window_count[nid]
+        avg_deg = round(node_degree_sum[nid] / n_wins, 3) if n_wins else 0
+        records.append({
+            "node_id"       : nid,
+            "host"          : host,
+            "path_critical" : 1 if nid in path_critical else 0,
+            "node_windows"  : n_wins,
+            "avg_degree"    : avg_deg,
+            "max_degree"    : node_max_degree[nid],
+        })
+
+    struct_df = pd.DataFrame(records)
+    print(f"  OK Nodes analyzed         : {len(struct_df)}")
+    print(f"  OK Path-critical nodes    : {struct_df['path_critical'].sum()}")
+    return struct_df
+
+def compute_correlation(persist_df, struct_df):
+    print("\n[5/6] Computing persistence-structure correlation...")
+
+    host_persist = persist_df.groupby("host").agg(
+        total_cves          = ("cve_id",           "nunique"),
+        max_persistence_span= ("persistence_span",  "max"),
+        avg_persistence_span= ("persistence_span",  "mean"),
+        max_streak          = ("persistence_streak","max"),
+        total_exposure_score= ("exposure_score",    "sum"),
+        critical_cve_count  = ("severity",
+                               lambda x: (x == "CRITICAL").sum()),
+    ).reset_index()
+
+    merged = pd.merge(host_persist, struct_df, on="host", how="inner")
+
+    if len(merged) < 3:
+        print("  WARN Not enough data points for correlation (need >=3 hosts)")
+        return merged, {}
+
+    correlations = {}
+    pairs = [
+        ("max_persistence_span",  "path_critical",  "max_span vs path_critical"),
+        ("max_persistence_span",  "avg_degree",     "max_span vs avg_degree"),
+        ("total_exposure_score",  "path_critical",  "exposure_score vs path_critical"),
+        ("total_exposure_score",  "avg_degree",     "exposure_score vs avg_degree"),
+        ("critical_cve_count",    "path_critical",  "critical_CVEs vs path_critical"),
+        ("avg_persistence_span",  "node_windows",   "avg_span vs node_windows"),
+    ]
+
+    print(f"\n  {'Pair':<40} {'r':>7} {'p-value':>10} {'sig':>5}")
+    print("  " + "-" * 65)
+
+    for x_col, y_col, label in pairs:
+        if x_col in merged.columns and y_col in merged.columns:
+            x = merged[x_col].astype(float)
+            y = merged[y_col].astype(float)
+            if x.std() > 0 and y.std() > 0:
+                r, p = stats.pearsonr(x, y)
+                sig  = "***" if p < 0.001 else ("**" if p < 0.01 else
+                        ("*" if p < 0.05 else "ns"))
+                print(f"  {label:<40} {r:>7.3f} {p:>10.4f} {sig:>5}")
+                correlations[label] = {"r": round(r, 3), "p": round(p, 4), "sig": sig}
+            else:
+                print(f"  {label:<40} {'N/A':>7} {'N/A':>10} {'N/A':>5}")
+
+    return merged, correlations
+
+def identify_chronic_risk(merged_df, persist_df, windows):
+    threshold = math.ceil(len(windows) * 0.5)
+
+    chronic = merged_df[
+        (merged_df["max_persistence_span"] >= threshold) &
+        (merged_df["path_critical"] == 1)
+    ].copy()
+
+    chronic["risk_tier"] = chronic.apply(
+        lambda r: "CRITICAL_CHRONIC" if r["critical_cve_count"] > 0
+                  else "HIGH_CHRONIC",
+        axis=1
+    )
+
+    chronic = chronic.sort_values("total_exposure_score", ascending=False)
+    return chronic
+
+def compute_attack_surface_evolution(persist_df, struct_df,
+                                     windows, host_in_window, graphs):
+    rows     = []
+    prev_cve_set = set()
+
+    for w in windows:
+        active_hosts  = host_in_window.get(w, set())
+        G             = graphs.get(w, nx.DiGraph())
+
+        window_cve_set = set()
+        total_exposure = 0.0
+        critical_count = 0
+
+        for host in active_hosts:
+            w_df = persist_df[
+                (persist_df["host"] == host) &
+                (persist_df["presence_windows"].str.contains(w))
+            ]
+            for _, r in w_df.iterrows():
+                window_cve_set.add((host, r["cve_id"]))
+                total_exposure += r["severity_weight"]
+                if r["severity"] == "CRITICAL":
+                    critical_count += 1
+
+        new_cves      = len(window_cve_set - prev_cve_set)
+        resolved_cves = len(prev_cve_set - window_cve_set)
+
+        combined_pc   = set()
+        all_nodes     = list(G.nodes())
+        for src in all_nodes:
+            for dst in all_nodes:
+                if src == dst:
+                    continue
+                if nx.has_path(G, src, dst):
+                    try:
+                        path = nx.shortest_path(G, src, dst)
+                        combined_pc.update(path)
+                    except nx.NetworkXNoPath:
+                        continue
+
+        density = (G.number_of_edges() / G.number_of_nodes()
+                   if G.number_of_nodes() > 0 else 0)
+
+        rows.append({
+            "window"              : w,
+            "active_hosts"        : len(active_hosts),
+            "active_nodes"        : G.number_of_nodes(),
+            "active_edges"        : G.number_of_edges(),
+            "structural_density"  : round(density, 3),
+            "active_cves"         : len(window_cve_set),
+            "critical_cves"       : critical_count,
+            "path_critical_nodes" : len(combined_pc),
+            "total_exposure_score": round(total_exposure, 3),
+            "new_cves"            : new_cves,
+            "resolved_cves"       : resolved_cves,
+        })
+        prev_cve_set = window_cve_set
+
+    return pd.DataFrame(rows)
+
+def print_report(persist_df, chronic_df, evolution_df,
+                 correlations, windows):
+    print("\n" + "=" * 68)
+    print("  CROSS-WINDOW VULNERABILITY PERSISTENCE RISK REPORT")
+    print("=" * 68)
+
+    print(f"\n  CVE Persistence Distribution:")
+    print(f"  {'Span':>6} {'Count':>8} {'Pct':>8}")
+    print("  " + "-" * 26)
+    for span in sorted(persist_df["persistence_span"].unique()):
+        cnt = (persist_df["persistence_span"] == span).sum()
+        pct = round(100 * cnt / len(persist_df), 1)
+        bar = "#" * int(pct / 5)
+        print(f"  {span:>6} {cnt:>8} {pct:>7.1f}%  {bar}")
+
+    print(f"\n  Chronic Risk Nodes (persistent + path-critical):")
+    if chronic_df.empty:
+        print("    None found - all persistently vulnerable nodes "
+              "are structurally isolated.")
+    else:
+        print(f"  {'Host':<8} {'MaxSpan':>8} {'ExposureScore':>14} "
+              f"{'CritCVEs':>9} {'Tier':<20}")
+        print("  " + "-" * 62)
+        for _, r in chronic_df.iterrows():
+            print(f"  {r['host']:<8} {r['max_persistence_span']:>8} "
+                  f"{r['total_exposure_score']:>14.3f} "
+                  f"{r['critical_cve_count']:>9} "
+                  f"{r['risk_tier']:<20}")
+
+    print(f"\n  Attack Surface Evolution Across Windows:")
+    print(f"  {'Window':<8} {'Hosts':>6} {'CVEs':>6} {'CritCVEs':>9} "
+          f"{'PathCrit':>9} {'Exposure':>9} {'New':>5} {'Gone':>5}")
+    print("  " + "-" * 62)
+    for _, r in evolution_df.iterrows():
+        print(f"  {r['window']:<8} {r['active_hosts']:>6} "
+              f"{r['active_cves']:>6} {r['critical_cves']:>9} "
+              f"{r['path_critical_nodes']:>9} "
+              f"{r['total_exposure_score']:>9.2f} "
+              f"{r['new_cves']:>5} {r['resolved_cves']:>5}")
+
+    print("=" * 68)
+
+def print_key_findings(persist_df, chronic_df, evolution_df,
+                       correlations, windows):
+    multi_window = persist_df[persist_df["persistence_span"] > 1]
+    all_window   = persist_df[persist_df["persistence_span"] == len(windows)]
+    avg_span     = persist_df["persistence_span"].mean()
+    max_exposure = persist_df["exposure_score"].max()
+    max_exp_row  = persist_df.loc[persist_df["exposure_score"].idxmax()]
+
+    exp_corr = correlations.get("exposure_score vs path_critical", {})
+
+    print("\n" + "=" * 68)
+    print("  KEY FINDINGS FOR PAPER")
+    print("=" * 68)
+    print(f"\n  1. {len(multi_window)} of {len(persist_df)} CVE-host pairs "
+          f"({round(100*len(multi_window)/max(len(persist_df),1),1)}%)")
+    print(f"     persist across more than one time window.")
+    print(f"     Average persistence span: {avg_span:.2f} windows.")
+
+    if len(all_window):
+        print(f"\n  2. {len(all_window)} CVE-host pairs present across ALL "
+              f"{len(windows)} windows")
+        print("     - these are chronically unpatched vulnerabilities.")
+        for _, r in all_window.head(3).iterrows():
+            print(f"     {r['host']} | {r['cve_id']} | {r['severity']}")
+
+    print(f"\n  3. Highest exposure score: {max_exposure:.3f}")
+    print(f"     Host: {max_exp_row['host']} | CVE: {max_exp_row['cve_id']}")
+    print(f"     Severity: {max_exp_row['severity']} | "
+          f"Span: {max_exp_row['persistence_span']} windows")
+
+    if chronic_df.empty:
+        print("\n  4. No chronic risk nodes identified.")
+        print("     Persistently vulnerable hosts are structurally isolated.")
+        print("     This itself is a finding: patch prioritization by")
+        print("     persistence alone would misallocate effort.")
+    else:
+        print(f"\n  4. {len(chronic_df)} chronic risk nodes identified")
+        print("     (persistent AND path-critical).")
+        top = chronic_df.iloc[0]
+        print(f"     Most dangerous: {top['host']} | "
+              f"exposure={top['total_exposure_score']:.3f} | "
+              f"tier={top['risk_tier']}")
+
+    if exp_corr:
+        print(f"\n  5. Exposure score vs path criticality: "
+              f"r={exp_corr.get('r','N/A')} "
+              f"(p={exp_corr.get('p','N/A')}, {exp_corr.get('sig','N/A')})")
+        if abs(exp_corr.get('r', 0)) > 0.3:
+            print("     Positive correlation confirms that persistently")
+            print("     vulnerable nodes tend to be structurally important.")
+        else:
+            print("     Low correlation confirms persistence and structural")
+            print("     importance are orthogonal - both dimensions are needed.")
+
+    if len(evolution_df) > 1:
+        max_exp_w = evolution_df.loc[
+            evolution_df["total_exposure_score"].idxmax(), "window"
+        ]
+        max_new_w = evolution_df.loc[
+            evolution_df["new_cves"].idxmax(), "window"
+        ]
+        print(f"\n  6. Peak attack surface exposure: {max_exp_w}")
+        print(f"     Most new CVEs introduced in: {max_new_w}")
+        print("     Static IDS analyzing any single window would miss")
+        print("     the temporal exposure trajectory entirely.")
+
+    print("=" * 68)
+
+def save_results(persist_df, chronic_df, evolution_df, merged_df, correlations):
+    persist_df.to_csv(OUT_PERSISTENCE, index=False)
+    chronic_df.to_csv(OUT_CHRONIC,     index=False)
+    evolution_df.to_csv(OUT_EVOLUTION, index=False)
+
+    corr_rows = [
+        {"metric_pair": k, **v}
+        for k, v in correlations.items()
+    ]
+    pd.DataFrame(corr_rows).to_csv(OUT_CORRELATION, index=False)
+
+    print(f"\n  OK CVE persistence      : {OUT_PERSISTENCE}")
+    print(f"  OK Chronic risk nodes   : {OUT_CHRONIC}")
+    print(f"  OK Evolution table      : {OUT_EVOLUTION}")
+    print(f"  OK Correlation results  : {OUT_CORRELATION}")
+
+def main():
+    print("=" * 60)
+    print("Cross-Window Vulnerability Persistence Risk")
+    print("=" * 60)
+
+    host_cves_map                              = load_cve_map()
+    windows, host_in_window, graphs, \
+        node_id_map, registry                  = load_tag_per_window()
+
+    persist_df                                 = compute_cve_persistence(
+        host_cves_map, windows, host_in_window)
+    struct_df                                  = compute_structural_importance(
+        graphs, registry, windows)
+
+    merged_df, correlations                    = compute_correlation(
+        persist_df, struct_df)
+    chronic_df                                 = identify_chronic_risk(
+        merged_df, persist_df, windows)
+    evolution_df                               = compute_attack_surface_evolution(
+        persist_df, struct_df, windows, host_in_window, graphs)
+
+    print("\n[6/6] Saving results...")
+    save_results(persist_df, chronic_df, evolution_df, merged_df, correlations)
+
+    print_report(persist_df, chronic_df, evolution_df, correlations, windows)
+    print_key_findings(persist_df, chronic_df, evolution_df, correlations, windows)
+
+if __name__ == "__main__":
+    main()
+
+
 # ===== File: Alert corelator comparison.py =====
 """
 Baseline Comparator for Idea 3
@@ -2938,6 +3506,24 @@ def run_with_output_capture(output_path):
                 f"Triage: total_alerts={int(row.get('total_alerts', 0))} "
                 f"promoted={int(row.get('promoted_count', 0))} "
                 f"demoted={int(row.get('demoted_count', 0))}"
+            )
+
+    corr_csv = ids_dir / "persistence_correlation.csv"
+    if corr_csv.exists():
+        df = pd.read_csv(corr_csv)
+        if not df.empty:
+            top = df.iloc[0]
+            summary_lines.append(
+                f"Persistence: top_pair={top.get('metric_pair', 'N/A')} "
+                f"r={top.get('r', 'N/A')} p={top.get('p', 'N/A')}"
+            )
+
+    chronic_csv = ids_dir / "chronic_risk_nodes.csv"
+    if chronic_csv.exists():
+        df = pd.read_csv(chronic_csv)
+        if not df.empty:
+            summary_lines.append(
+                f"Chronic risk: nodes={len(df)}"
             )
 
     baseline_csv = ids_dir / "baseline_comparison.csv"
