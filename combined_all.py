@@ -6,6 +6,9 @@ import subprocess
 import re
 import os
 import json
+import sys
+import contextlib
+import atexit
 import pandas as pd
 import datetime
 import random
@@ -19,6 +22,48 @@ BASE_DIR = Path.cwd().resolve()
 os.chdir(BASE_DIR)
 IDS_OUTPUT_DIR = BASE_DIR / "ids_outputs"
 IDS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+_CAPTURE_ACTIVE = False
+_CAPTURE_FILE = None
+_CAPTURE_STDOUT = None
+_CAPTURE_STDERR = None
+
+def start_output_capture(output_path):
+    global _CAPTURE_ACTIVE, _CAPTURE_FILE, _CAPTURE_STDOUT, _CAPTURE_STDERR
+    if _CAPTURE_ACTIVE:
+        return
+    _CAPTURE_ACTIVE = True
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    _CAPTURE_FILE = output_path.open("w")
+    _CAPTURE_STDOUT = sys.stdout
+    _CAPTURE_STDERR = sys.stderr
+
+    class _Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+
+        def write(self, data):
+            for stream in self.streams:
+                stream.write(data)
+
+        def flush(self):
+            for stream in self.streams:
+                stream.flush()
+
+    tee = _Tee(_CAPTURE_STDOUT, _CAPTURE_FILE)
+    sys.stdout = tee
+    sys.stderr = tee
+
+    def _close_capture():
+        sys.stdout = _CAPTURE_STDOUT
+        sys.stderr = _CAPTURE_STDERR
+        _CAPTURE_FILE.close()
+
+    atexit.register(_close_capture)
+
+if __name__ == "__main__":
+    start_output_capture(IDS_OUTPUT_DIR / "run_output.txt")
 
 WINDOW_POLICY = "first"  # Options: first, last, most_frequent
 
@@ -3445,32 +3490,6 @@ def print_consolidated_summary():
     print("=" * 72)
 
 
-def run_with_output_capture(output_path):
-    import sys
-    import contextlib
-
-    class _Tee:
-        def __init__(self, *streams):
-            self.streams = streams
-
-        def write(self, data):
-            for stream in self.streams:
-                stream.write(data)
-
-        def flush(self):
-            for stream in self.streams:
-                stream.flush()
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w") as f:
-        tee_out = _Tee(sys.stdout, f)
-        tee_err = _Tee(sys.stderr, f)
-        with contextlib.redirect_stdout(tee_out), contextlib.redirect_stderr(tee_err):
-            main()
-            print_consolidated_summary()
-
-    print(f"Output saved to {output_path}")
-
     ids_dir = Path(".").resolve() / "ids_outputs"
     summary_lines = []
 
@@ -3549,4 +3568,5 @@ def run_with_output_capture(output_path):
     print("=" * 72)
 
 if __name__ == "__main__":
-    run_with_output_capture(Path("ids_outputs") / "run_output.txt")
+    main()
+    print_consolidated_summary()
