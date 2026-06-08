@@ -2678,6 +2678,7 @@ from collections import defaultdict
 import pandas as pd
 import numpy as np
 import networkx as nx
+# pyrefly: ignore [missing-import]
 from scipy import stats
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
