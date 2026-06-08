@@ -1,2 +1,2 @@
 total_alerts,unmapped_alerts,total_pairs,valid_count,impossible_count,ambiguous_count,valid_pct,impossible_pct,ambiguous_pct
-97,0,64,8,44,12,12.5,68.75,18.75
+76,0,44,5,31,8,11.36,70.45,18.18

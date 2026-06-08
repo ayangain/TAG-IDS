@@ -1,11 +1,11 @@
 baseline,total_pairs,tag_valid,tag_impossible,tag_ambiguous,correlated_predicted,false_corr_count,false_corr_rate_pct,missed_chain_count,missed_chain_rate_pct,precision,recall,f1_score,note
-time_15min,64,8,44,12,17,11,64.7,5,62.5,0.214,0.375,0.273,
-time_30min,64,8,44,12,28,18,64.3,3,37.5,0.217,0.625,0.323,
-time_60min,64,8,44,12,47,32,68.1,2,25.0,0.158,0.75,0.261,
-time_120min,64,8,44,12,58,41,70.7,1,12.5,0.146,0.875,0.25,
-same_window,64,8,44,12,17,9,52.9,5,62.5,0.25,0.375,0.3,
-severity_gte_LOW,64,8,44,12,64,44,68.8,0,0.0,0.154,1.0,0.267,
-severity_gte_MEDIUM,64,8,44,12,53,36,67.9,2,25.0,0.143,0.75,0.24,
-severity_gte_HIGH,64,8,44,12,36,23,63.9,4,50.0,0.148,0.5,0.229,
-severity_gte_CRITICAL,64,8,44,12,5,5,100.0,8,100.0,0.0,0.0,0.0,
-TAG_IDS (ours),64,8,44,12,8,0,0.0,0,0.0,1.0,1.0,1.0,TAG resolves 81.2% of pairs; 12 ambiguous (18.8%)
+time_15min,44,5,31,8,7,5,71.4,5,100.0,0.0,0.0,0.0,
+time_30min,44,5,31,8,20,14,70.0,2,40.0,0.176,0.6,0.273,
+time_60min,44,5,31,8,32,21,65.6,1,20.0,0.16,0.8,0.267,
+time_120min,44,5,31,8,43,30,69.8,0,0.0,0.143,1.0,0.25,
+same_window,44,5,31,8,20,12,60.0,1,20.0,0.25,0.8,0.381,
+severity_gte_LOW,44,5,31,8,44,31,70.5,0,0.0,0.139,1.0,0.244,
+severity_gte_MEDIUM,44,5,31,8,38,26,68.4,0,0.0,0.161,1.0,0.278,
+severity_gte_HIGH,44,5,31,8,24,15,62.5,2,40.0,0.167,0.6,0.261,
+severity_gte_CRITICAL,44,5,31,8,2,2,100.0,5,100.0,0.0,0.0,0.0,
+TAG_IDS (ours),44,5,31,8,5,0,0.0,0,0.0,1.0,1.0,1.0,TAG resolves 81.8% of pairs; 8 ambiguous (18.2%)
