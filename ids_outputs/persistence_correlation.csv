@@ -1,4 +1,4 @@
 metric_pair,r,p,sig
-max_span vs avg_degree,-0.087,0.6102,ns
-exposure_score vs avg_degree,0.12,0.478,ns
+max_span vs avg_degree,0.128,0.7247,ns
+exposure_score vs avg_degree,-0.216,0.5487,ns
 avg_span vs node_windows,1.0,0.0,***

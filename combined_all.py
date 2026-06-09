@@ -2319,11 +2319,29 @@ def build_tag_graphs():
     return graphs, registry, node_host
 
 def compute_betweenness_per_window(graphs):
-    print("\n[4/7] Skipping betweenness centrality per request...")
+    print("\n[4/7] Computing betweenness centrality on combined temporal graph...")
+    # Original logic: compute betweenness on the full TAG (all windows merged)
+    # then map values back per window.  This preserves cross-window structural
+    # importance — a node that bridges T1→T3 gets credit even in its T1 subgraph.
+    combined = nx.compose_all(list(graphs.values())) if graphs else nx.DiGraph()
+
+    if combined.number_of_nodes() < 2:
+        combined_bc = {n: 0.0 for n in combined.nodes()}
+    else:
+        combined_bc = nx.betweenness_centrality(combined)
+
+    max_bc = max(combined_bc.values()) if combined_bc else 0
+    print(f"  OK Combined graph      : {combined.number_of_nodes()} nodes, "
+          f"{combined.number_of_edges()} edges")
+    print(f"  OK Max betweenness     : {max_bc:.4f}")
+
+    # Map combined BC values to per-window dicts
     bc_per_window = {}
     for window, G in graphs.items():
-        bc_per_window[window] = {n: 0.0 for n in G.nodes()}
-        print(f"  OK {window}: set 0.0 for {len(bc_per_window[window])} nodes")
+        bc_per_window[window] = {n: combined_bc.get(n, 0.0) for n in G.nodes()}
+        w_max = max(bc_per_window[window].values()) if bc_per_window[window] else 0
+        print(f"  OK {window}: {len(bc_per_window[window])} nodes, "
+              f"max_bc={w_max:.4f}")
     return bc_per_window
 
 def compute_node_features(graphs, registry):
@@ -5733,6 +5751,26 @@ def print_consolidated_summary():
                     f"FCR={best['false_corr_rate_pct']}% "
                     f"MCR={best['missed_chain_rate_pct']}%"
                 )
+
+    progress_csv = ids_dir / "attacker_progress_summary.csv"
+    if progress_csv.exists():
+        df = pd.read_csv(progress_csv)
+        if not df.empty:
+            row = df.iloc[0]
+            parts = [f"Attacker progress: experiments={int(row.get('total_experiments', 0))}"]
+            tag_60_exact = row.get("tag_exact_at_60pct")
+            tag_60_top3  = row.get("tag_top3_at_60pct")
+            tag_60_dist  = row.get("tag_dist_at_60pct")
+            rand_60      = row.get("rand_exact_at_60pct")
+            if pd.notna(tag_60_exact):
+                parts.append(f"tag_exact@60%={tag_60_exact}")
+            if pd.notna(tag_60_top3):
+                parts.append(f"tag_top3@60%={tag_60_top3}")
+            if pd.notna(tag_60_dist):
+                parts.append(f"tag_dist@60%={tag_60_dist}")
+            if pd.notna(rand_60):
+                parts.append(f"rand_exact@60%={rand_60}")
+            summary_lines.append(" ".join(parts))
 
     if not summary_lines:
         summary_lines.append("No summary outputs found in ids_outputs.")
