@@ -5442,23 +5442,25 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
 
     if not tag_40.empty:
         row = tag_40.iloc[0]
-        print(f"\n  1. At 40% alert loss, TAG-based inference achieves "
-              f"{row['exact_match_rate']*100:.1f}% exact match")
-        print(f"     and {row['top3_accuracy']*100:.1f}% top-3 accuracy "
-              f"(avg distance = {row['mean_distance']:.2f} hops).")
-        print(f"     The attack graph structural prior enables position")
-        print(f"     estimation even with significant observation gaps.")
+        print(f"\n  1. At 40% alert loss, TAG-based inference provides")
+        print(f"     probabilistic regional localization rather than exact")
+        print(f"     point prediction: {row['top3_accuracy']*100:.1f}% top-3 accuracy")
+        print(f"     with mean topological error of {row['mean_distance']:.2f} hops.")
+        print(f"     The attack graph prior narrows the attacker to a smaller")
+        print(f"     structural region even with substantial observation gaps.")
 
     if not tag_60.empty and not rand_60.empty:
         tag_r  = tag_60.iloc[0]
         rand_r = rand_60.iloc[0]
-        improvement = tag_r["exact_match_rate"] - rand_r["exact_match_rate"]
-        print(f"\n  2. At 60% sparsity, TAG inference outperforms random by")
-        print(f"     {improvement*100:+.1f} percentage points on exact match.")
-        print(f"     TAG: {tag_r['exact_match_rate']*100:.1f}%  |  "
-              f"Random: {rand_r['exact_match_rate']*100:.1f}%")
-        print(f"     -> Graph structure provides meaningful signal even")
-        print(f"        when majority of alerts are missing.")
+        dist_delta = rand_r["mean_distance"] - tag_r["mean_distance"]
+        print(f"\n  2. At 60% sparsity, TAG does not beat random on exact-match")
+        print(f"     accuracy ({tag_r['exact_match_rate']*100:.1f}% vs "
+              f"{rand_r['exact_match_rate']*100:.1f}%).")
+        print(f"     However, TAG reduces mean topological error from")
+        print(f"     {rand_r['mean_distance']:.2f} to {tag_r['mean_distance']:.2f} hops")
+        print(f"     ({dist_delta:.2f} hops closer on average).")
+        print(f"     -> The defensible contribution is topology-aware narrowing,")
+        print(f"        not exact endpoint recovery.")
 
     if not tag_60.empty and not last_60.empty:
         tag_r  = tag_60.iloc[0]
@@ -5471,16 +5473,16 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
         if tag_r["mean_distance"] < last_r["mean_distance"]:
             print(f"     TAG is topologically closer even when not exactly right.")
         else:
-            print(f"     Last-Seen is competitive on distance but lacks")
-            print(f"     probabilistic confidence estimation (belief vector).")
+            print(f"     Last-Seen is stronger on exact match here, but TAG still")
+            print(f"     remains useful as a probabilistic regional localizer.")
 
     if not tag_60.empty:
         tag_r = tag_60.iloc[0]
         print(f"\n  4. Mean belief assigned to true position: "
               f"{tag_r['mean_belief_true']:.4f}")
         print(f"     (Random baseline: {1.0/max(len(all_nodes),1):.4f})")
-        print(f"     -> TAG concentrates probability mass on the correct")
-        print(f"        region of the graph, providing calibrated confidence.")
+        print(f"     -> TAG redistributes probability mass toward the correct")
+        print(f"        region of the graph, supporting calibrated localization.")
 
     # Degradation analysis
     if len(tag_df) >= 2:
@@ -5494,9 +5496,10 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
                 threshold_rate = r
                 break
         if threshold_rate:
-            print(f"\n  5. Accuracy drops below 50% at {threshold_rate:.0%} sparsity.")
-            print(f"     This defines the operational limit for reliable")
-            print(f"     attacker tracking with the current TAG topology.")
+            print(f"\n  5. Exact point recovery remains below 50% from the first")
+            print(f"     non-zero sparsity level tested ({threshold_rate:.0%}).")
+            print(f"     This method should therefore be framed as regional")
+            print(f"     localization, not reliable exact attacker tracking.")
         else:
             print(f"\n  5. Accuracy remains above 50% across all tested sparsity")
             print(f"     rates, indicating robust inference from the TAG structure.")
@@ -5511,9 +5514,9 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
 
     print(f"\n  -> No existing IDS can estimate attacker progress from")
     print(f"     sparse alerts using attack graph topology as a prior.")
-    print(f"     This is the first demonstration that TAG structure")
-    print(f"     enables probabilistic position inference under partial")
-    print(f"     observability.")
+    print(f"     This is best interpreted as probabilistic regional")
+    print(f"     localization under partial observability, with measurable")
+    print(f"     distance reduction even when exact recovery is weak.")
     print("=" * 72)
 
 
@@ -5532,6 +5535,10 @@ def save_results(results_df, by_source_df, overall_df):
     tag_40 = tag_overall[tag_overall["sparsity_rate"] == 0.4]
     tag_60 = tag_overall[tag_overall["sparsity_rate"] == 0.6]
     rand_60 = rand_overall[rand_overall["sparsity_rate"] == 0.6]
+    last_60 = overall_df[
+        (overall_df["method"] == "Last_Seen") &
+        (overall_df["sparsity_rate"] == 0.6)
+    ]
 
     summary = {
         "total_experiments" : len(results_df),
@@ -5554,6 +5561,13 @@ def save_results(results_df, by_source_df, overall_df):
     if not rand_60.empty:
         r = rand_60.iloc[0]
         summary["rand_exact_at_60pct"] = r["exact_match_rate"]
+        summary["rand_dist_at_60pct"]  = r["mean_distance"]
+
+    if not last_60.empty:
+        r = last_60.iloc[0]
+        summary["last_exact_at_60pct"] = r["exact_match_rate"]
+        summary["last_top3_at_60pct"]  = r["top3_accuracy"]
+        summary["last_dist_at_60pct"]  = r["mean_distance"]
 
     pd.DataFrame([summary]).to_csv(OUT_SUMMARY, index=False)
 
@@ -5646,6 +5660,12 @@ VALID      = "STRUCTURALLY_VALID"
 IMPOSSIBLE = "STRUCTURALLY_IMPOSSIBLE"
 AMBIGUOUS  = "STRUCTURALLY_AMBIGUOUS"
 
+
+def _fmt_num(value, fmt):
+    if pd.isna(value):
+        return "N/A"
+    return format(value, fmt)
+
 SEVERITY_ORDER = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 
 
@@ -5666,11 +5686,11 @@ def _pair_metrics(tag_labels, predictions):
     missed       = sum(v and nc for v, nc in zip(valid_mask, not_corr))
     mcr = missed / n_valid if n_valid else 0.0
 
-    non_ambiguous = tag_labels != AMBIGUOUS
-    y_true = [1 if t == VALID else 0
-              for t, na in zip(tag_labels, non_ambiguous) if na]
-    y_pred = [1 if p == "CORRELATED" else 0
-              for p, na in zip(predictions, non_ambiguous) if na]
+    # For binary baseline evaluation, ambiguous pairs are not confirmed positives.
+    # If a baseline marks them CORRELATED, that should count against precision
+    # rather than being silently dropped from the F1 computation.
+    y_true = [1 if t == VALID else 0 for t in tag_labels]
+    y_pred = [1 if p == "CORRELATED" else 0 for p in predictions]
 
     tp = sum(a == 1 and b == 1 for a, b in zip(y_true, y_pred))
     fp = sum(a == 0 and b == 1 for a, b in zip(y_true, y_pred))
@@ -5741,8 +5761,27 @@ def bootstrap_label_cis(tag_df, n_boot=1000, seed=42):
     return {f"{key}_ci": _bootstrap_ci(values) for key, values in metrics.items()}
 
 
+def build_static_node_graph():
+    """Merge all TAG windows into one static graph, discarding time ordering."""
+    static_graph = nx.DiGraph()
+    arc_files = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
+
+    for af in arc_files:
+        df = pd.read_csv(af, header=None, names=["target", "source", "weight"])
+        for _, row in df.iterrows():
+            try:
+                src_id = int(row["source"])
+                dst_id = int(row["target"])
+            except (TypeError, ValueError):
+                continue
+            if src_id != dst_id:
+                static_graph.add_edge(src_id, dst_id)
+
+    return static_graph
+
+
 def build_static_host_graph():
-    host_graph = nx.DiGraph()
+    host_graph = nx.Graph()
     vertex_files = sorted(BASE_DIR.glob("VERTICES_T*.CSV"))
     arc_files = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
 
@@ -5772,6 +5811,8 @@ def build_static_host_graph():
             src_host = node_to_host.get((window, src_id))
             dst_host = node_to_host.get((window, dst_id))
             if src_host and dst_host and src_host != dst_host:
+                # Static snapshot baseline intentionally drops temporal and
+                # directional constraints, keeping only structural adjacency.
                 host_graph.add_edge(src_host, dst_host)
 
     return host_graph
@@ -5779,18 +5820,37 @@ def build_static_host_graph():
 
 def baseline_static_snapshot(tag_df):
     """Static merged TAG baseline that ignores temporal ordering."""
+    node_graph = build_static_node_graph()
     host_graph = build_static_host_graph()
     predictions = []
     for _, row in tag_df.iterrows():
-        src = row.get("alert_a_dest")
-        dst = row.get("alert_b_dest")
-        if src in host_graph and dst in host_graph:
+        node_a = row.get("alert_a_node_id")
+        node_b = row.get("alert_b_node_id")
+        host_a = row.get("alert_a_dest")
+        host_b = row.get("alert_b_dest")
+
+        node_corr = False
+        host_corr = False
+
+        try:
+            if pd.notna(node_a) and pd.notna(node_b):
+                node_a = int(node_a)
+                node_b = int(node_b)
+                if node_a in node_graph and node_b in node_graph:
+                    node_corr = (
+                        nx.has_path(node_graph, node_a, node_b)
+                        or nx.has_path(node_graph, node_b, node_a)
+                    )
+        except (TypeError, ValueError, nx.NetworkXError, nx.NodeNotFound):
+            node_corr = False
+
+        if host_a in host_graph and host_b in host_graph:
             try:
-                pred = "CORRELATED" if nx.has_path(host_graph, src, dst) else "NOT_CORRELATED"
+                host_corr = nx.has_path(host_graph, host_a, host_b)
             except (nx.NetworkXError, nx.NodeNotFound):
-                pred = "NOT_CORRELATED"
-        else:
-            pred = "NOT_CORRELATED"
+                host_corr = False
+
+        pred = "CORRELATED" if (node_corr or host_corr) else "NOT_CORRELATED"
         predictions.append(pred)
     return {"static_tag_snapshot": predictions}
 
@@ -5904,27 +5964,27 @@ def tag_self_metrics(tag_df):
         "false_corr_rate_pct" : 0.0,
         "missed_chain_count"  : 0,
         "missed_chain_rate_pct": 0.0,
-        "precision"           : 1.0,
-        "recall"              : 1.0,
-        "f1_score"            : 1.0,
+        "precision"           : float("nan"),
+        "recall"              : float("nan"),
+        "f1_score"            : float("nan"),
         "false_corr_rate_ci_low_pct" : 0.0,
         "false_corr_rate_ci_high_pct": 0.0,
         "missed_chain_rate_ci_low_pct": 0.0,
         "missed_chain_rate_ci_high_pct": 0.0,
-        "precision_ci_low"           : 1.0,
-        "precision_ci_high"          : 1.0,
-        "recall_ci_low"              : 1.0,
-        "recall_ci_high"             : 1.0,
-        "f1_score_ci_low"            : 1.0,
-        "f1_score_ci_high"           : 1.0,
+        "precision_ci_low"           : float("nan"),
+        "precision_ci_high"          : float("nan"),
+        "recall_ci_low"              : float("nan"),
+        "recall_ci_high"             : float("nan"),
+        "f1_score_ci_low"            : float("nan"),
+        "f1_score_ci_high"           : float("nan"),
         "valid_rate_ci_low_pct"     : ci["valid_pct_ci"][0],
         "valid_rate_ci_high_pct"    : ci["valid_pct_ci"][1],
         "impossible_rate_ci_low_pct": ci["impossible_pct_ci"][0],
         "impossible_rate_ci_high_pct": ci["impossible_pct_ci"][1],
         "ambiguous_rate_ci_low_pct" : ci["ambiguous_pct_ci"][0],
         "ambiguous_rate_ci_high_pct" : ci["ambiguous_pct_ci"][1],
-        "note"                : f"TAG resolves {coverage}% of pairs; "
-                                f"{n_ambiguous} ambiguous ({round(100*n_ambiguous/total,1)}%)",
+        "note"                : f"Reference/oracle row only: TAG resolves {coverage}% of pairs; "
+                                f"{n_ambiguous} ambiguous ({round(100*n_ambiguous/total,1)}%).",
     }
 
 def build_detail_table(tag_df, all_predictions):
@@ -5954,22 +6014,37 @@ def print_comparison(comparison_df):
         marker = " <" if "TAG_IDS" in str(row["baseline"]) else ""
         fcr_ci = f"[{row.get('false_corr_rate_ci_low_pct', row['false_corr_rate_pct']):.1f}, {row.get('false_corr_rate_ci_high_pct', row['false_corr_rate_pct']):.1f}]"
         mcr_ci = f"[{row.get('missed_chain_rate_ci_low_pct', row['missed_chain_rate_pct']):.1f}, {row.get('missed_chain_rate_ci_high_pct', row['missed_chain_rate_pct']):.1f}]"
-        prec_ci = f"[{row.get('precision_ci_low', row['precision']):.3f}, {row.get('precision_ci_high', row['precision']):.3f}]"
-        rec_ci = f"[{row.get('recall_ci_low', row['recall']):.3f}, {row.get('recall_ci_high', row['recall']):.3f}]"
-        f1_ci = f"[{row.get('f1_score_ci_low', row['f1_score']):.3f}, {row.get('f1_score_ci_high', row['f1_score']):.3f}]"
+        prec_ci = f"[{_fmt_num(row.get('precision_ci_low', row['precision']), '.3f')}, {_fmt_num(row.get('precision_ci_high', row['precision']), '.3f')}]"
+        rec_ci = f"[{_fmt_num(row.get('recall_ci_low', row['recall']), '.3f')}, {_fmt_num(row.get('recall_ci_high', row['recall']), '.3f')}]"
+        f1_ci = f"[{_fmt_num(row.get('f1_score_ci_low', row['f1_score']), '.3f')}, {_fmt_num(row.get('f1_score_ci_high', row['f1_score']), '.3f')}]"
         print(
             f"  {str(row['baseline']):<35} "
             f"{int(row['correlated_predicted']):>6} "
             f"{row['false_corr_rate_pct']:>5.1f} {fcr_ci:>12} "
             f"{row['missed_chain_rate_pct']:>5.1f} {mcr_ci:>12} "
-            f"{row['precision']:>7.3f} {prec_ci:>11} "
-            f"{row['recall']:>7.3f} {rec_ci:>11} "
-            f"{row['f1_score']:>7.3f} {f1_ci:>11}"
+            f"{_fmt_num(row['precision'], '.3f'):>7} {prec_ci:>11} "
+            f"{_fmt_num(row['recall'], '.3f'):>7} {rec_ci:>11} "
+            f"{_fmt_num(row['f1_score'], '.3f'):>7} {f1_ci:>11}"
             f"{marker}"
         )
 
     print("\n  FCR = False Correlation Rate: % of CORRELATED predictions TAG says are IMPOSSIBLE")
     print("  MCR = Missed Chain Rate     : % of TAG-VALID chains baseline marks NOT_CORRELATED")
+    print("=" * 80)
+
+
+def print_reference_metrics(reference_row):
+    print("\n" + "=" * 80)
+    print("  TAG-IDS REFERENCE")
+    print("=" * 80)
+    print(f"  Reference row               : {reference_row['baseline']}")
+    print(f"  Valid / Impossible / Ambig   : {reference_row['tag_valid']} / {reference_row['tag_impossible']} / {reference_row['tag_ambiguous']}")
+    print("  Reference precision / recall : N/A / N/A")
+    print("  Reference F1                : N/A")
+    print(f"  Valid rate CI               : [{reference_row['valid_rate_ci_low_pct']:.1f}, {reference_row['valid_rate_ci_high_pct']:.1f}]")
+    print(f"  Impossible rate CI          : [{reference_row['impossible_rate_ci_low_pct']:.1f}, {reference_row['impossible_rate_ci_high_pct']:.1f}]")
+    print(f"  Ambiguous rate CI           : [{reference_row['ambiguous_rate_ci_low_pct']:.1f}, {reference_row['ambiguous_rate_ci_high_pct']:.1f}]")
+    print(f"  Note                        : {reference_row['note']}")
     print("=" * 80)
 
 def print_key_findings(comparison_df, tag_df):
@@ -6021,9 +6096,8 @@ def main():
     for name, preds in all_predictions.items():
         rows.append(compute_metrics(tag_df, preds, name))
 
-    rows.append(tag_self_metrics(tag_df))
-
     comparison_df = pd.DataFrame(rows)
+    reference_row = tag_self_metrics(tag_df)
 
     print("\n[4/5] Building pair-level detail table...")
     detail_df = build_detail_table(tag_df, all_predictions)
@@ -6035,6 +6109,7 @@ def main():
     print(f"  OK Pair detail table   : {DETAIL_CSV}")
 
     print_comparison(comparison_df)
+    print_reference_metrics(reference_row)
     print_key_findings(comparison_df, tag_df)
 
 def print_consolidated_summary():
@@ -6147,6 +6222,7 @@ def print_consolidated_summary():
             tag_60_top3  = row.get("tag_top3_at_60pct")
             tag_60_dist  = row.get("tag_dist_at_60pct")
             rand_60      = row.get("rand_exact_at_60pct")
+            rand_60_dist = row.get("rand_dist_at_60pct")
             if pd.notna(tag_60_exact):
                 parts.append(f"tag_exact@60%={tag_60_exact}")
             if pd.notna(tag_60_top3):
@@ -6155,6 +6231,8 @@ def print_consolidated_summary():
                 parts.append(f"tag_dist@60%={tag_60_dist}")
             if pd.notna(rand_60):
                 parts.append(f"rand_exact@60%={rand_60}")
+            if pd.notna(rand_60_dist):
+                parts.append(f"rand_dist@60%={rand_60_dist}")
             summary_lines.append(" ".join(parts))
 
     if not summary_lines:
@@ -6295,10 +6373,15 @@ def generate_html_report():
             m['tag_60_top3'] = f"{r.get('tag_top3_at_60pct', 0)*100:.1f}%"
             m['tag_60_dist'] = f"{r.get('tag_dist_at_60pct', 0):.2f}"
             m['rand_60_exact'] = f"{r.get('rand_exact_at_60pct', 0)*100:.1f}%"
-            
-    # Baseline for distance (placeholder for random distance and last-seen as they aren't fully in the overall summary CSV usually, or we can hardcode fallback)
-    m['rand_60_dist'] = "32.72"
-    m['ls_60_exact'] = "0.0%"
+            m['rand_60_dist'] = f"{r.get('rand_dist_at_60pct', 0):.2f}"
+            m['ls_60_exact'] = f"{r.get('last_exact_at_60pct', 0)*100:.1f}%"
+            m['ls_60_top3'] = f"{r.get('last_top3_at_60pct', 0)*100:.1f}%"
+            m['ls_60_dist'] = f"{r.get('last_dist_at_60pct', 0):.2f}"
+
+    m.setdefault('rand_60_dist', "N/A")
+    m.setdefault('ls_60_exact', "N/A")
+    m.setdefault('ls_60_top3', "N/A")
+    m.setdefault('ls_60_dist', "N/A")
     m['ls_60_top3'] = "0.0%"
     m['ls_60_dist'] = "22.58"
 
@@ -6490,16 +6573,20 @@ def generate_html_report():
     <div class="section-card">
         <h2>6. Attacker Progress Estimation</h2>
         <div class="alert alert-info">
-            <strong>Important:</strong> TAG structure definitively enables probabilistic position inference under deep partial observability. No existing IDS can estimate attacker progress from sparse alerts using an attack graph topology as a mathematical prior.
+            <strong>Important:</strong> This result should be framed as topology-aware regional localization under sparse alerts, not reliable exact endpoint prediction. The strongest evidence is lower average graph distance to the true attacker position.
         </div>
         <table>
-            <thead><tr><th>Model (at 60% Alert Loss)</th><th>Exact Match</th><th>Top-3 Accuracy</th><th>Avg Distance</th></tr></thead>
+            <thead><tr><th>Model (at 60% Alert Loss)</th><th>Avg Distance</th><th>Exact Match</th><th>Top-3 Accuracy</th></tr></thead>
             <tbody>
-                <tr><td><strong>TAG-IDS</strong></td><td style="color: var(--accent-green); font-weight: 600;">{m['tag_60_exact']}</td><td style="color: var(--accent-green); font-weight: 600;">{m['tag_60_top3']}</td><td>{m['tag_60_dist']} hops</td></tr>
-                <tr><td>Random Walk Baseline</td><td>{m['rand_60_exact']}</td><td>N/A</td><td>{m['rand_60_dist']} hops</td></tr>
-                <tr><td>Last-Seen Baseline</td><td>{m['ls_60_exact']}</td><td>{m['ls_60_top3']}</td><td>{m['ls_60_dist']} hops</td></tr>
+                <tr><td><strong>TAG-IDS</strong></td><td style="color: var(--accent-green); font-weight: 600;">{m['tag_60_dist']} hops</td><td>{m['tag_60_exact']}</td><td>{m['tag_60_top3']}</td></tr>
+                <tr><td>Random Walk Baseline</td><td>{m['rand_60_dist']} hops</td><td>{m['rand_60_exact']}</td><td>N/A</td></tr>
+                <tr><td>Last-Seen Baseline</td><td>{m['ls_60_dist']} hops</td><td>{m['ls_60_exact']}</td><td>{m['ls_60_top3']}</td></tr>
             </tbody>
         </table>
+        <ul>
+            <li><span class="highlight">Defensible takeaway:</span> at 60% alert loss, TAG-IDS is closer to the true attacker position on the graph than a random baseline on average.</li>
+            <li><span class="highlight">Interpretation:</span> the method narrows search to a smaller topological region, even when exact node recovery remains weak.</li>
+        </ul>
     </div>
 
     <div class="section-card">
