@@ -244,8 +244,8 @@ print("=" * 60)
 print("Temporal Attack Graph with CVE Integration")
 print("=" * 60 + "\n")
 
-total_hosts  = int(input("Enter total number of hosts (default: 10): ") or 10)
-time_windows = int(input("Enter number of time windows (default: 4): ") or 4)
+total_hosts  = int(input("Enter total number of hosts (default: 120): ") or 120)
+time_windows = int(input("Enter number of time windows (default: 5): ") or 5)
 
 min_hosts_per_window = 3
 time_windows = max(1, time_windows)
@@ -351,47 +351,73 @@ for t in range(1, time_windows + 1):
         existing_edges = set(arcs)
         n_verts        = len(vertex_ids)
 
-        # ── Hub-and-spoke DAG topology ──
-        # Pick 1-2 pivot (hub) nodes that many paths traverse.
-        # Remaining nodes split into "sources" (early) and "sinks" (late).
-        # Edges: source → pivot → sink, creating high betweenness at pivots.
-        n_pivots = 1 if n_verts <= 4 else min(2, n_verts // 3)
-        pivot_start = n_verts // 3          # pivots sit in the middle
-        pivots = vertex_ids[pivot_start : pivot_start + n_pivots]
-        sources = vertex_ids[:pivot_start]
-        sinks   = vertex_ids[pivot_start + n_pivots:]
-
-        # Source → pivot edges
-        for src in sources:
-            for piv in pivots:
-                edge = (src, piv)
-                if edge not in existing_edges:
-                    arcs.append(edge)
-                    existing_edges.add(edge)
-
-        # Pivot → sink edges
-        for piv in pivots:
-            for snk in sinks:
-                edge = (piv, snk)
-                if edge not in existing_edges:
-                    arcs.append(edge)
-                    existing_edges.add(edge)
-
-        # Inter-pivot chain (if multiple pivots)
-        for i in range(len(pivots) - 1):
-            edge = (pivots[i], pivots[i + 1])
-            if edge not in existing_edges:
+        def add_edge(src_id, dst_id):
+            edge = (src_id, dst_id)
+            if src_id != dst_id and edge not in existing_edges:
                 arcs.append(edge)
                 existing_edges.add(edge)
 
-        # A few direct source→sink skip edges for realism (30% chance)
-        for src in sources:
-            for snk in sinks:
-                if random.random() < 0.3:
-                    edge = (src, snk)
-                    if edge not in existing_edges:
-                        arcs.append(edge)
-                        existing_edges.add(edge)
+        if n_verts < 3:
+            for from_id, to_id in zip(vertex_ids, vertex_ids[1:]):
+                add_edge(from_id, to_id)
+        else:
+            peripheral_count = max(1, n_verts // 5)
+            if n_verts - peripheral_count < 3:
+                peripheral_count = max(0, n_verts - 3)
+
+            core_ids         = vertex_ids[:n_verts - peripheral_count] if peripheral_count else vertex_ids
+            peripheral_ids   = vertex_ids[n_verts - peripheral_count:] if peripheral_count else []
+
+            dmz_count = min(8, max(1, len(core_ids) // 5))
+            app_count = min(max(1, round(len(core_ids) * 0.4)), len(core_ids) - dmz_count - 1)
+            data_count = len(core_ids) - dmz_count - app_count
+            if data_count < 1:
+                data_count = 1
+                app_count = max(1, len(core_ids) - dmz_count - data_count)
+
+            dmz_nodes  = core_ids[:dmz_count]
+            app_nodes  = core_ids[dmz_count:dmz_count + app_count]
+            data_nodes = core_ids[dmz_count + app_count:]
+
+            if not app_nodes or not data_nodes:
+                for from_id, to_id in zip(core_ids, core_ids[1:]):
+                    add_edge(from_id, to_id)
+            else:
+                app_hub_start = max(0, len(app_nodes) // 3)
+                app_hubs = app_nodes[app_hub_start:app_hub_start + min(3, len(app_nodes) - app_hub_start)]
+                if not app_hubs:
+                    app_hubs = app_nodes[-min(3, len(app_nodes)):]
+
+                dmz_fanout = min(len(app_nodes), max(2, min(5, len(app_nodes))))
+                data_fanout = min(len(data_nodes), max(1, min(3, len(data_nodes))))
+
+                for src in dmz_nodes:
+                    for dst in random.sample(app_nodes, dmz_fanout):
+                        add_edge(src, dst)
+
+                for src in app_nodes[:app_hub_start]:
+                    for hub in app_hubs:
+                        add_edge(src, hub)
+
+                for hub in app_hubs:
+                    for dst in random.sample(data_nodes, data_fanout):
+                        add_edge(hub, dst)
+
+                for src, dst in zip(app_nodes, app_nodes[1:]):
+                    if random.random() < 0.35:
+                        add_edge(src, dst)
+
+                for src, dst in zip(data_nodes, data_nodes[1:]):
+                    if random.random() < 0.25:
+                        add_edge(src, dst)
+
+                for src in dmz_nodes:
+                    if random.random() < 0.3:
+                        add_edge(src, random.choice(app_hubs))
+
+            # Peripheral hosts remain vertex-only nodes so they are present in the
+            # TAG but do not become path-critical.
+            _ = peripheral_ids
 
     with open(f"VERTICES_T{t}.CSV", "w") as f:
         for vid in sorted(vertices.keys()):
@@ -687,12 +713,15 @@ class IDSAlertSimulator:
             "time_window"      : time_window,
         }
 
-    def simulate_alerts_for_path(self, time_window, src_host, path_nodes):
+    def simulate_alerts_for_path(self, time_window, path_nodes):
+        if len(path_nodes) < 2:
+            return
+
         window_start = self.base_time + datetime.timedelta(hours=time_window)
         # Advance time slightly for each step in the path
         current_time = window_start + datetime.timedelta(minutes=random.randint(0, 10))
         
-        for dst_host in path_nodes:
+        for src_host, dst_host in zip(path_nodes, path_nodes[1:]):
             if dst_host in self.host_cves_map and self.host_cves_map[dst_host]:
                 cve_id      = random.choice(self.host_cves_map[dst_host])
                 cve_info    = globals().get("CVE_INFO", {}).get(cve_id, {})
@@ -758,10 +787,12 @@ class IDSAlertSimulator:
         all_nodes_list = list(all_nodes) if all_nodes else [f"h{i}" for i in range(1, self.num_hosts + 1)]
 
         # Generate structural attack campaigns (random walks)
-        num_campaigns = random.randint(12, 20)
+        num_campaigns = random.randint(45, 60)
         for i in range(num_campaigns):
-            attacker_ip = f"ext_attacker_{i}"
-            window = random.randint(1, time_windows)
+            if time_windows > 1 and random.random() < 0.18:
+                window = 1
+            else:
+                window = random.randint(2, time_windows) if time_windows > 1 else 1
             G = G_by_window.get(window)
             
             if G is None or G.number_of_edges() == 0:
@@ -774,7 +805,7 @@ class IDSAlertSimulator:
             path = []
             curr = random.choice(sources)
             path.append(curr)
-            walk_length = random.randint(2, 6)
+            walk_length = random.randint(3, 7)
             for _ in range(walk_length - 1):
                 successors = list(G.successors(curr))
                 if not successors:
@@ -783,15 +814,23 @@ class IDSAlertSimulator:
                 path.append(curr)
             
             if len(path) > 1:
-                self.simulate_alerts_for_path(window, attacker_ip, path)
+                self.simulate_alerts_for_path(window, path)
 
-        # Mix in 30% random noise alerts
-        num_noise = int(len(self.alerts) * 0.3)
+        # Mix in internal noise alerts so every alert still maps to TAG hosts.
+        num_noise = max(50, int(len(self.alerts) * 0.35))
         for _ in range(num_noise):
-            window = random.randint(1, time_windows)
-            src_host = f"ext_attacker_{random.randint(0, 50)}"
-            dst_host = random.choice(all_nodes_list)
-            self.simulate_alerts_for_path(window, src_host, [dst_host])
+            if time_windows > 1 and random.random() < 0.18:
+                window = 1
+            else:
+                window = random.randint(2, time_windows) if time_windows > 1 else 1
+            if len(all_nodes_list) < 2:
+                continue
+            src_host = random.choice(all_nodes_list)
+            dst_choices = [node for node in all_nodes_list if node != src_host]
+            if not dst_choices:
+                continue
+            dst_host = random.choice(dst_choices)
+            self.simulate_alerts_for_path(window, [src_host, dst_host])
 
     def get_alerts_dataframe(self):
         return pd.DataFrame(self.alerts)
@@ -1053,12 +1092,9 @@ def sparsify_and_replace():
         if vertex_path.exists():
             vertices_df = pd.read_csv(vertex_path, header=None)
 
-            used_nodes = set()
-            for u, v in final_edges:
-                used_nodes.add(u)
-                used_nodes.add(v)
-
-            filtered_vertices = vertices_df[vertices_df[0].isin(used_nodes)]
+            # Keep all original vertices, including isolates, so peripheral
+            # hosts remain visible in the final TAG.
+            filtered_vertices = vertices_df
 
             temp_vertex_path = vertex_path.with_suffix(".tmp")
             filtered_vertices.to_csv(temp_vertex_path, index=False, header=False)
@@ -1116,6 +1152,7 @@ def prune_and_export_all():
         H = nx.DiGraph()
 
         exec_ids = list(exec_nodes.keys())
+        G.add_nodes_from(exec_ids)
 
         for i in range(len(exec_ids)):
             for j in range(len(exec_ids)):
@@ -5611,6 +5648,152 @@ AMBIGUOUS  = "STRUCTURALLY_AMBIGUOUS"
 
 SEVERITY_ORDER = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
 
+
+def _pair_metrics(tag_labels, predictions):
+    total        = len(predictions)
+    n_valid      = (tag_labels == VALID).sum()
+    n_impossible = (tag_labels == IMPOSSIBLE).sum()
+    n_ambiguous  = (tag_labels == AMBIGUOUS).sum()
+
+    correlated_mask  = [p == "CORRELATED" for p in predictions]
+    impossible_mask  = tag_labels == IMPOSSIBLE
+    false_corr       = sum(c and i for c, i in zip(correlated_mask, impossible_mask))
+    total_correlated = sum(correlated_mask)
+    fcr = false_corr / total_correlated if total_correlated else 0.0
+
+    valid_mask   = tag_labels == VALID
+    not_corr     = [p == "NOT_CORRELATED" for p in predictions]
+    missed       = sum(v and nc for v, nc in zip(valid_mask, not_corr))
+    mcr = missed / n_valid if n_valid else 0.0
+
+    non_ambiguous = tag_labels != AMBIGUOUS
+    y_true = [1 if t == VALID else 0
+              for t, na in zip(tag_labels, non_ambiguous) if na]
+    y_pred = [1 if p == "CORRELATED" else 0
+              for p, na in zip(predictions, non_ambiguous) if na]
+
+    tp = sum(a == 1 and b == 1 for a, b in zip(y_true, y_pred))
+    fp = sum(a == 0 and b == 1 for a, b in zip(y_true, y_pred))
+    fn = sum(a == 1 and b == 0 for a, b in zip(y_true, y_pred))
+
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall    = tp / (tp + fn) if (tp + fn) else 0.0
+    f1        = (2 * precision * recall / (precision + recall)
+                 if (precision + recall) else 0.0)
+
+    return {
+        "total_pairs": total,
+        "tag_valid": int(n_valid),
+        "tag_impossible": int(n_impossible),
+        "tag_ambiguous": int(n_ambiguous),
+        "correlated_predicted": int(total_correlated),
+        "false_corr_count": int(false_corr),
+        "false_corr_rate_pct": round(fcr * 100, 1),
+        "missed_chain_count": int(missed),
+        "missed_chain_rate_pct": round(mcr * 100, 1),
+        "precision": round(precision, 3),
+        "recall": round(recall, 3),
+        "f1_score": round(f1, 3),
+    }
+
+
+def _bootstrap_ci(samples, alpha=0.05):
+    lower = float(np.percentile(samples, 100 * (alpha / 2)))
+    upper = float(np.percentile(samples, 100 * (1 - alpha / 2)))
+    return round(lower, 3), round(upper, 3)
+
+
+def bootstrap_metric_cis(tag_df, predictions, n_boot=1000, seed=42):
+    tag_labels = tag_df["classification"].values
+    n = len(tag_df)
+    if n == 0:
+        return {}
+
+    rng = np.random.default_rng(seed)
+    metrics = {"false_corr_rate_pct": [], "missed_chain_rate_pct": [],
+               "precision": [], "recall": [], "f1_score": []}
+
+    pred_array = np.array(predictions, dtype=object)
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, size=n)
+        vals = _pair_metrics(tag_labels[idx], pred_array[idx].tolist())
+        for key in metrics:
+            metrics[key].append(vals[key])
+
+    return {f"{key}_ci": _bootstrap_ci(values) for key, values in metrics.items()}
+
+
+def bootstrap_label_cis(tag_df, n_boot=1000, seed=42):
+    labels = tag_df["classification"].values
+    n = len(tag_df)
+    if n == 0:
+        return {}
+
+    rng = np.random.default_rng(seed)
+    metrics = {"valid_pct": [], "impossible_pct": [], "ambiguous_pct": []}
+
+    for _ in range(n_boot):
+        sample = labels[rng.integers(0, n, size=n)]
+        metrics["valid_pct"].append(100 * np.mean(sample == VALID))
+        metrics["impossible_pct"].append(100 * np.mean(sample == IMPOSSIBLE))
+        metrics["ambiguous_pct"].append(100 * np.mean(sample == AMBIGUOUS))
+
+    return {f"{key}_ci": _bootstrap_ci(values) for key, values in metrics.items()}
+
+
+def build_static_host_graph():
+    host_graph = nx.DiGraph()
+    vertex_files = sorted(BASE_DIR.glob("VERTICES_T*.CSV"))
+    arc_files = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
+
+    node_to_host = {}
+    for vf in vertex_files:
+        df = pd.read_csv(vf, header=None, names=["node_id", "label", "type", "value"])
+        for _, row in df.iterrows():
+            try:
+                node_id = int(row["node_id"])
+            except (TypeError, ValueError):
+                continue
+            hosts = re.findall(r"\b(h\d+)\b", str(row["label"]))
+            if hosts:
+                host = hosts[0]
+                node_to_host[(vf.stem.replace("VERTICES_", ""), node_id)] = host
+                host_graph.add_node(host)
+
+    for af in arc_files:
+        window = af.stem.replace("ARCS_", "")
+        df = pd.read_csv(af, header=None, names=["target", "source", "weight"])
+        for _, row in df.iterrows():
+            try:
+                src_id = int(row["source"])
+                dst_id = int(row["target"])
+            except (TypeError, ValueError):
+                continue
+            src_host = node_to_host.get((window, src_id))
+            dst_host = node_to_host.get((window, dst_id))
+            if src_host and dst_host and src_host != dst_host:
+                host_graph.add_edge(src_host, dst_host)
+
+    return host_graph
+
+
+def baseline_static_snapshot(tag_df):
+    """Static merged TAG baseline that ignores temporal ordering."""
+    host_graph = build_static_host_graph()
+    predictions = []
+    for _, row in tag_df.iterrows():
+        src = row.get("alert_a_dest")
+        dst = row.get("alert_b_dest")
+        if src in host_graph and dst in host_graph:
+            try:
+                pred = "CORRELATED" if nx.has_path(host_graph, src, dst) else "NOT_CORRELATED"
+            except (nx.NetworkXError, nx.NodeNotFound):
+                pred = "NOT_CORRELATED"
+        else:
+            pred = "NOT_CORRELATED"
+        predictions.append(pred)
+    return {"static_tag_snapshot": predictions}
+
 def load_data():
     print("\n[1/5] Loading data...")
 
@@ -5684,52 +5867,22 @@ def compute_metrics(tag_df, predictions, baseline_name):
         f"Length mismatch: {len(predictions)} predictions vs {len(tag_df)} pairs"
 
     tag_labels = tag_df["classification"].values
-
-    total        = len(predictions)
-    n_valid      = (tag_labels == VALID).sum()
-    n_impossible = (tag_labels == IMPOSSIBLE).sum()
-    n_ambiguous  = (tag_labels == AMBIGUOUS).sum()
-
-    correlated_mask  = [p == "CORRELATED" for p in predictions]
-    impossible_mask  = tag_labels == IMPOSSIBLE
-    false_corr       = sum(c and i for c, i in zip(correlated_mask, impossible_mask))
-    total_correlated = sum(correlated_mask)
-    fcr = false_corr / total_correlated if total_correlated else 0.0
-
-    valid_mask   = tag_labels == VALID
-    not_corr     = [p == "NOT_CORRELATED" for p in predictions]
-    missed       = sum(v and nc for v, nc in zip(valid_mask, not_corr))
-    mcr = missed / n_valid if n_valid else 0.0
-
-    non_ambiguous = tag_labels != AMBIGUOUS
-    y_true = [1 if t == VALID else 0
-              for t, na in zip(tag_labels, non_ambiguous) if na]
-    y_pred = [1 if p == "CORRELATED" else 0
-              for p, na in zip(predictions, non_ambiguous) if na]
-
-    tp = sum(a == 1 and b == 1 for a, b in zip(y_true, y_pred))
-    fp = sum(a == 0 and b == 1 for a, b in zip(y_true, y_pred))
-    fn = sum(a == 1 and b == 0 for a, b in zip(y_true, y_pred))
-
-    precision = tp / (tp + fp) if (tp + fp) else 0.0
-    recall    = tp / (tp + fn) if (tp + fn) else 0.0
-    f1        = (2 * precision * recall / (precision + recall)
-                 if (precision + recall) else 0.0)
+    metrics = _pair_metrics(tag_labels, predictions)
+    ci = bootstrap_metric_cis(tag_df, predictions)
 
     return {
         "baseline"           : baseline_name,
-        "total_pairs"        : total,
-        "tag_valid"          : int(n_valid),
-        "tag_impossible"     : int(n_impossible),
-        "tag_ambiguous"      : int(n_ambiguous),
-        "correlated_predicted": int(total_correlated),
-        "false_corr_count"   : int(false_corr),
-        "false_corr_rate_pct": round(fcr * 100, 1),
-        "missed_chain_count" : int(missed),
-        "missed_chain_rate_pct": round(mcr * 100, 1),
-        "precision"          : round(precision, 3),
-        "recall"             : round(recall, 3),
-        "f1_score"           : round(f1, 3),
+        **metrics,
+        "false_corr_rate_ci_low_pct" : ci["false_corr_rate_pct_ci"][0],
+        "false_corr_rate_ci_high_pct": ci["false_corr_rate_pct_ci"][1],
+        "missed_chain_rate_ci_low_pct": ci["missed_chain_rate_pct_ci"][0],
+        "missed_chain_rate_ci_high_pct": ci["missed_chain_rate_pct_ci"][1],
+        "precision_ci_low"          : ci["precision_ci"][0],
+        "precision_ci_high"         : ci["precision_ci"][1],
+        "recall_ci_low"             : ci["recall_ci"][0],
+        "recall_ci_high"            : ci["recall_ci"][1],
+        "f1_score_ci_low"           : ci["f1_score_ci"][0],
+        "f1_score_ci_high"          : ci["f1_score_ci"][1],
     }
 
 def tag_self_metrics(tag_df):
@@ -5738,6 +5891,7 @@ def tag_self_metrics(tag_df):
     n_impossible = (tag_df["classification"] == IMPOSSIBLE).sum()
     n_ambiguous  = (tag_df["classification"] == AMBIGUOUS).sum()
     coverage     = round(100 * (n_valid + n_impossible) / total, 1)
+    ci = bootstrap_label_cis(tag_df)
 
     return {
         "baseline"            : "TAG_IDS (ours)",
@@ -5753,6 +5907,22 @@ def tag_self_metrics(tag_df):
         "precision"           : 1.0,
         "recall"              : 1.0,
         "f1_score"            : 1.0,
+        "false_corr_rate_ci_low_pct" : 0.0,
+        "false_corr_rate_ci_high_pct": 0.0,
+        "missed_chain_rate_ci_low_pct": 0.0,
+        "missed_chain_rate_ci_high_pct": 0.0,
+        "precision_ci_low"           : 1.0,
+        "precision_ci_high"          : 1.0,
+        "recall_ci_low"              : 1.0,
+        "recall_ci_high"             : 1.0,
+        "f1_score_ci_low"            : 1.0,
+        "f1_score_ci_high"           : 1.0,
+        "valid_rate_ci_low_pct"     : ci["valid_pct_ci"][0],
+        "valid_rate_ci_high_pct"    : ci["valid_pct_ci"][1],
+        "impossible_rate_ci_low_pct": ci["impossible_pct_ci"][0],
+        "impossible_rate_ci_high_pct": ci["impossible_pct_ci"][1],
+        "ambiguous_rate_ci_low_pct" : ci["ambiguous_pct_ci"][0],
+        "ambiguous_rate_ci_high_pct" : ci["ambiguous_pct_ci"][1],
         "note"                : f"TAG resolves {coverage}% of pairs; "
                                 f"{n_ambiguous} ambiguous ({round(100*n_ambiguous/total,1)}%)",
     }
@@ -5776,20 +5946,25 @@ def print_comparison(comparison_df):
     print("  (TAG VALID = ground truth positive; TAG IMPOSSIBLE = ground truth negative)")
     print("=" * 80)
 
-    print(f"\n  {'Baseline':<35} {'Corr':>6} {'FCR%':>6} {'MCR%':>6} "
-          f"{'Prec':>7} {'Rec':>7} {'F1':>7}")
-    print("  " + "-" * 78)
+    print(f"\n  {'Baseline':<35} {'Corr':>6} {'FCR% [95% CI]':>18} {'MCR% [95% CI]':>18} "
+          f"{'Prec [95% CI]':>18} {'Rec [95% CI]':>18} {'F1 [95% CI]':>18}")
+    print("  " + "-" * 125)
 
     for _, row in comparison_df.iterrows():
         marker = " <" if "TAG_IDS" in str(row["baseline"]) else ""
+        fcr_ci = f"[{row.get('false_corr_rate_ci_low_pct', row['false_corr_rate_pct']):.1f}, {row.get('false_corr_rate_ci_high_pct', row['false_corr_rate_pct']):.1f}]"
+        mcr_ci = f"[{row.get('missed_chain_rate_ci_low_pct', row['missed_chain_rate_pct']):.1f}, {row.get('missed_chain_rate_ci_high_pct', row['missed_chain_rate_pct']):.1f}]"
+        prec_ci = f"[{row.get('precision_ci_low', row['precision']):.3f}, {row.get('precision_ci_high', row['precision']):.3f}]"
+        rec_ci = f"[{row.get('recall_ci_low', row['recall']):.3f}, {row.get('recall_ci_high', row['recall']):.3f}]"
+        f1_ci = f"[{row.get('f1_score_ci_low', row['f1_score']):.3f}, {row.get('f1_score_ci_high', row['f1_score']):.3f}]"
         print(
             f"  {str(row['baseline']):<35} "
             f"{int(row['correlated_predicted']):>6} "
-            f"{row['false_corr_rate_pct']:>6.1f} "
-            f"{row['missed_chain_rate_pct']:>6.1f} "
-            f"{row['precision']:>7.3f} "
-            f"{row['recall']:>7.3f} "
-            f"{row['f1_score']:>7.3f}"
+            f"{row['false_corr_rate_pct']:>5.1f} {fcr_ci:>12} "
+            f"{row['missed_chain_rate_pct']:>5.1f} {mcr_ci:>12} "
+            f"{row['precision']:>7.3f} {prec_ci:>11} "
+            f"{row['recall']:>7.3f} {rec_ci:>11} "
+            f"{row['f1_score']:>7.3f} {f1_ci:>11}"
             f"{marker}"
         )
 
@@ -5802,6 +5977,7 @@ def print_key_findings(comparison_df, tag_df):
     n_valid    = (tag_df["classification"] == VALID).sum()
     n_impos    = (tag_df["classification"] == IMPOSSIBLE).sum()
     n_ambig    = (tag_df["classification"] == AMBIGUOUS).sum()
+    label_ci   = bootstrap_label_cis(tag_df)
 
     non_tag = comparison_df[~comparison_df["baseline"].str.contains("TAG")]
     best    = non_tag.loc[non_tag["f1_score"].idxmax()]
@@ -5809,14 +5985,17 @@ def print_key_findings(comparison_df, tag_df):
     print("\n" + "=" * 80)
     print("  KEY FINDINGS")
     print("=" * 80)
-    print(f"\n  1. Of {total} consecutive alert pairs, only {n_valid} ({round(100*n_valid/total,1)}%)")
+    print(f"\n  1. Of {total} consecutive alert pairs, only {n_valid} "
+          f"({round(100*n_valid/total,1)}% [{label_ci['valid_pct_ci'][0]:.1f}, {label_ci['valid_pct_ci'][1]:.1f}])")
     print(f"     are structurally valid attack chains according to the TAG.")
-    print(f"\n  2. {n_impos} pairs ({round(100*n_impos/total,1)}%) are structurally IMPOSSIBLE -")
+    print(f"\n  2. {n_impos} pairs ({round(100*n_impos/total,1)}% [{label_ci['impossible_pct_ci'][0]:.1f}, {label_ci['impossible_pct_ci'][1]:.1f}]) are structurally IMPOSSIBLE -")
     print(f"     a standard correlator would incorrectly link these.")
-    print(f"\n  3. {n_ambig} pairs ({round(100*n_ambig/total,1)}%) are ambiguous (path exists")
+    print(f"\n  3. {n_ambig} pairs ({round(100*n_ambig/total,1)}% [{label_ci['ambiguous_pct_ci'][0]:.1f}, {label_ci['ambiguous_pct_ci'][1]:.1f}]) are ambiguous (path exists")
     print(f"     but temporal ordering violated - potential detection lag).")
     print(f"\n  4. Best baseline: {best['baseline']}")
-    print(f"     FCR={best['false_corr_rate_pct']}%  MCR={best['missed_chain_rate_pct']}%  F1={best['f1_score']}")
+    print(f"     FCR={best['false_corr_rate_pct']}% [{best.get('false_corr_rate_ci_low_pct', best['false_corr_rate_pct']):.1f}, {best.get('false_corr_rate_ci_high_pct', best['false_corr_rate_pct']):.1f}]"
+          f"  MCR={best['missed_chain_rate_pct']}% [{best.get('missed_chain_rate_ci_low_pct', best['missed_chain_rate_pct']):.1f}, {best.get('missed_chain_rate_ci_high_pct', best['missed_chain_rate_pct']):.1f}]"
+          f"  F1={best['f1_score']} [{best.get('f1_score_ci_low', best['f1_score']):.3f}, {best.get('f1_score_ci_high', best['f1_score']):.3f}]")
     print(f"\n  5. TAG-IDS reduces false correlation rate to 0% by design,")
     print(f"     while identifying the {n_ambig} ambiguous cases as a third")
     print(f"     class that no baseline can distinguish.")
@@ -5834,6 +6013,7 @@ def main():
     all_predictions.update(baseline_time_proximity(tag_df))
     all_predictions.update(baseline_same_window(tag_df))
     all_predictions.update(baseline_severity_threshold(tag_df))
+    all_predictions.update(baseline_static_snapshot(tag_df))
     print(f"  OK Baselines defined   : {len(all_predictions)}")
 
     print("\n[3/5] Computing metrics...")

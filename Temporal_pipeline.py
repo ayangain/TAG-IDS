@@ -178,8 +178,8 @@ print("╔" + "=" * 58 + "╗")
 print("║" + "  Temporal Attack Graph with CVE Integration".center(58) + "║")
 print("╚" + "=" * 58 + "╝\n")
 
-total_hosts  = int(input("Enter total number of hosts (default: 10): ") or 10)
-time_windows = int(input("Enter number of time windows (default: 4): ") or 4)
+total_hosts  = int(input("Enter total number of hosts (default: 120): ") or 120)
+time_windows = int(input("Enter number of time windows (default: 5): ") or 5)
 
 min_hosts_per_window = 3
 time_windows = max(1, time_windows)
@@ -281,13 +281,77 @@ for t in range(1, time_windows + 1):
         vertices[host_vertex_ids[host]] = f"execCode({host}, root): {cve_summary}"
 
     if len(vertices) > 1:
-        vertex_ids     = list(vertices.keys())
+        vertex_ids     = sorted(vertices.keys())
         existing_edges = set(arcs)
-        for from_id, to_id in zip(sorted(vertex_ids), sorted(vertex_ids)[1:]):
-            edge = (from_id, to_id)
-            if edge not in existing_edges:
+        n_verts        = len(vertex_ids)
+
+        def add_edge(src_id, dst_id):
+            edge = (src_id, dst_id)
+            if src_id != dst_id and edge not in existing_edges:
                 arcs.append(edge)
                 existing_edges.add(edge)
+
+        if n_verts < 3:
+            for from_id, to_id in zip(vertex_ids, vertex_ids[1:]):
+                add_edge(from_id, to_id)
+        else:
+            peripheral_count = max(1, n_verts // 5)
+            if n_verts - peripheral_count < 3:
+                peripheral_count = max(0, n_verts - 3)
+
+            core_ids         = vertex_ids[:n_verts - peripheral_count] if peripheral_count else vertex_ids
+            peripheral_ids   = vertex_ids[n_verts - peripheral_count:] if peripheral_count else []
+
+            dmz_count = min(8, max(1, len(core_ids) // 5))
+            app_count = min(max(1, round(len(core_ids) * 0.4)), len(core_ids) - dmz_count - 1)
+            data_count = len(core_ids) - dmz_count - app_count
+            if data_count < 1:
+                data_count = 1
+                app_count = max(1, len(core_ids) - dmz_count - data_count)
+
+            dmz_nodes  = core_ids[:dmz_count]
+            app_nodes  = core_ids[dmz_count:dmz_count + app_count]
+            data_nodes = core_ids[dmz_count + app_count:]
+
+            if not app_nodes or not data_nodes:
+                for from_id, to_id in zip(core_ids, core_ids[1:]):
+                    add_edge(from_id, to_id)
+            else:
+                app_hub_start = max(0, len(app_nodes) // 3)
+                app_hubs = app_nodes[app_hub_start:app_hub_start + min(3, len(app_nodes) - app_hub_start)]
+                if not app_hubs:
+                    app_hubs = app_nodes[-min(3, len(app_nodes)):]
+
+                dmz_fanout = min(len(app_nodes), max(2, min(5, len(app_nodes))))
+                data_fanout = min(len(data_nodes), max(1, min(3, len(data_nodes))))
+
+                for src in dmz_nodes:
+                    for dst in random.sample(app_nodes, dmz_fanout):
+                        add_edge(src, dst)
+
+                for src in app_nodes[:app_hub_start]:
+                    for hub in app_hubs:
+                        add_edge(src, hub)
+
+                for hub in app_hubs:
+                    for dst in random.sample(data_nodes, data_fanout):
+                        add_edge(hub, dst)
+
+                for src, dst in zip(app_nodes, app_nodes[1:]):
+                    if random.random() < 0.35:
+                        add_edge(src, dst)
+
+                for src, dst in zip(data_nodes, data_nodes[1:]):
+                    if random.random() < 0.25:
+                        add_edge(src, dst)
+
+                for src in dmz_nodes:
+                    if random.random() < 0.3:
+                        add_edge(src, random.choice(app_hubs))
+
+            # Peripheral hosts remain vertex-only nodes so they are present in the
+            # TAG but do not become path-critical.
+            _ = peripheral_ids
 
     with open(f"VERTICES_T{t}.CSV", "w") as f:
         for vid in sorted(vertices.keys()):
@@ -589,7 +653,7 @@ class IDSAlertSimulator:
 
     def simulate_alerts_for_window(self, time_window, hosts, num_alerts=None):
         if num_alerts is None:
-            num_alerts = random.randint(5, 15)
+            num_alerts = random.randint(25, 45)
 
         window_start = self.base_time + datetime.timedelta(hours=time_window)
 
