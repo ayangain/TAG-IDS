@@ -261,33 +261,43 @@ active_hosts_by_window = []
 previous_active_hosts  = set()
 covered_hosts          = set()
 
-for i in range(time_windows):
-    remaining_windows = time_windows - i
-    unseen_hosts      = set(all_hosts) - covered_hosts
-    min_new_hosts     = (len(unseen_hosts) + remaining_windows - 1) // remaining_windows
-    target_count      = random.randint(min_active_hosts, max_active_hosts)
-    target_count      = min(total_hosts, max(target_count, min_new_hosts))
+# ── Host retention guarantee ──────────────────────────────────
+# At least MIN_RETAIN_RATE of T_{i}'s hosts persist into T_{i+1}.
+# This ensures the combined TAG is connected (enabling meaningful
+# betweenness) and creates cross-window chains for Idea 3 / Idea 7.
+# Not all hosts will necessarily appear — real networks don't
+# observe every host in every monitoring period.
+MIN_RETAIN_RATE = 0.30
+MAX_RETAIN_RATE = 0.50
 
-    max_retained = max(0, target_count - min_new_hosts)
-    if previous_active_hosts and max_retained:
-        retain_min   = min(max_retained, max(1, round(len(previous_active_hosts) * 0.5)))
-        retain_max   = min(len(previous_active_hosts), max_retained)
-        retain_count = random.randint(retain_min, retain_max) if retain_max >= retain_min else retain_max
+for i in range(time_windows):
+    target_count = random.randint(
+        max(min_active_hosts, 8),
+        min(total_hosts, max(min_active_hosts, round(total_hosts * 0.25)))
+    )
+
+    # 1) Retain 30-50% of previous window's hosts
+    if previous_active_hosts:
+        retain_min   = max(1, round(len(previous_active_hosts) * MIN_RETAIN_RATE))
+        retain_max   = max(retain_min, round(len(previous_active_hosts) * MAX_RETAIN_RATE))
+        retain_max   = min(retain_max, len(previous_active_hosts), target_count)
+        retain_count = random.randint(retain_min, retain_max)
         retained_hosts = set(random.sample(sorted(previous_active_hosts), retain_count))
     else:
         retained_hosts = set()
 
-    slots     = target_count - len(retained_hosts)
-    new_count = min(len(unseen_hosts), slots, max(min_new_hosts, 0))
-    new_hosts = set(random.sample(sorted(unseen_hosts), new_count)) if new_count else set()
+    # 2) Fill remaining slots with a mix of unseen and returning hosts
+    slots        = target_count - len(retained_hosts)
+    unseen_hosts = sorted(set(all_hosts) - covered_hosts)
+
+    # Try to introduce some unseen hosts (but don't force all 120 in)
+    new_count = min(len(unseen_hosts), max(1, slots // 2)) if unseen_hosts and slots > 0 else 0
+    new_hosts = set(random.sample(unseen_hosts, new_count)) if new_count else set()
 
     slots = target_count - len(retained_hosts) - len(new_hosts)
-    available_returning_hosts = set(all_hosts) - retained_hosts - new_hosts
-    returning_count = min(slots, len(available_returning_hosts))
-    returning_hosts = (
-        set(random.sample(sorted(available_returning_hosts), returning_count))
-        if returning_count else set()
-    )
+    available = sorted(set(all_hosts) - retained_hosts - new_hosts)
+    returning_count = min(slots, len(available)) if slots > 0 else 0
+    returning_hosts = set(random.sample(available, returning_count)) if returning_count else set()
 
     active_hosts = retained_hosts | new_hosts | returning_hosts
     active_hosts_by_window.append(active_hosts)
@@ -296,6 +306,14 @@ for i in range(time_windows):
 
 hosts_per_window_dist = [len(hosts) for hosts in active_hosts_by_window]
 print(f"OK Active hosts per window: {hosts_per_window_dist}")
+
+# Report host overlap between consecutive windows
+for i in range(1, len(active_hosts_by_window)):
+    prev = active_hosts_by_window[i - 1]
+    curr = active_hosts_by_window[i]
+    overlap = prev & curr
+    pct = 100 * len(overlap) / len(prev) if prev else 0
+    print(f"  T{i}→T{i+1} overlap: {len(overlap)}/{len(prev)} ({pct:.0f}%)")
 print(f"OK Unique hosts scheduled across all windows: {len(covered_hosts)}\n")
 
 host_cves = {}
@@ -361,62 +379,47 @@ for t in range(1, time_windows + 1):
             for from_id, to_id in zip(vertex_ids, vertex_ids[1:]):
                 add_edge(from_id, to_id)
         else:
+            # ── Hub-and-spoke topology ──────────────────────────────
+            # First ~20% of nodes are hubs; the rest are leaves.
+            # All inter-leaf traffic routes through hubs, creating
+            # 10-50x betweenness differentiation between hub and leaf
+            # nodes.  This gives the STS betweenness component real
+            # discriminating power.
             peripheral_count = max(1, n_verts // 5)
             if n_verts - peripheral_count < 3:
                 peripheral_count = max(0, n_verts - 3)
 
-            core_ids         = vertex_ids[:n_verts - peripheral_count] if peripheral_count else vertex_ids
+            connectable_ids  = vertex_ids[:n_verts - peripheral_count] if peripheral_count else vertex_ids
             peripheral_ids   = vertex_ids[n_verts - peripheral_count:] if peripheral_count else []
 
-            dmz_count = min(8, max(1, len(core_ids) // 5))
-            app_count = min(max(1, round(len(core_ids) * 0.4)), len(core_ids) - dmz_count - 1)
-            data_count = len(core_ids) - dmz_count - app_count
-            if data_count < 1:
-                data_count = 1
-                app_count = max(1, len(core_ids) - dmz_count - data_count)
+            num_hubs  = max(2, len(connectable_ids) // 5)
+            hub_ids   = connectable_ids[:num_hubs]
+            leaf_ids  = connectable_ids[num_hubs:]
 
-            dmz_nodes  = core_ids[:dmz_count]
-            app_nodes  = core_ids[dmz_count:dmz_count + app_count]
-            data_nodes = core_ids[dmz_count + app_count:]
+            # 1) Sequential backbone chain between hubs
+            for h1, h2 in zip(hub_ids, hub_ids[1:]):
+                add_edge(h1, h2)
 
-            if not app_nodes or not data_nodes:
-                for from_id, to_id in zip(core_ids, core_ids[1:]):
-                    add_edge(from_id, to_id)
-            else:
-                app_hub_start = max(0, len(app_nodes) // 3)
-                app_hubs = app_nodes[app_hub_start:app_hub_start + min(3, len(app_nodes) - app_hub_start)]
-                if not app_hubs:
-                    app_hubs = app_nodes[-min(3, len(app_nodes)):]
+            # 2) Each hub connects to ~4 leaf nodes (spoke edges)
+            leaf_fanout = min(4, len(leaf_ids))
+            for hub in hub_ids:
+                for leaf in random.sample(leaf_ids, leaf_fanout):
+                    add_edge(hub, leaf)
 
-                dmz_fanout = min(len(app_nodes), max(2, min(5, len(app_nodes))))
-                data_fanout = min(len(data_nodes), max(1, min(3, len(data_nodes))))
+            # 3) A few cross-hub shortcuts for realism (≤30% of hubs)
+            for hub in hub_ids:
+                if random.random() < 0.30:
+                    other_hubs = [h for h in hub_ids if h != hub]
+                    if other_hubs:
+                        add_edge(hub, random.choice(other_hubs))
 
-                for src in dmz_nodes:
-                    for dst in random.sample(app_nodes, dmz_fanout):
-                        add_edge(src, dst)
+            # 4) Sparse leaf-to-hub return edges (≤25% of leaves)
+            for leaf in leaf_ids:
+                if random.random() < 0.25:
+                    add_edge(leaf, random.choice(hub_ids))
 
-                for src in app_nodes[:app_hub_start]:
-                    for hub in app_hubs:
-                        add_edge(src, hub)
-
-                for hub in app_hubs:
-                    for dst in random.sample(data_nodes, data_fanout):
-                        add_edge(hub, dst)
-
-                for src, dst in zip(app_nodes, app_nodes[1:]):
-                    if random.random() < 0.35:
-                        add_edge(src, dst)
-
-                for src, dst in zip(data_nodes, data_nodes[1:]):
-                    if random.random() < 0.25:
-                        add_edge(src, dst)
-
-                for src in dmz_nodes:
-                    if random.random() < 0.3:
-                        add_edge(src, random.choice(app_hubs))
-
-            # Peripheral hosts remain vertex-only nodes so they are present in the
-            # TAG but do not become path-critical.
+            # Peripheral hosts remain vertex-only nodes so they are
+            # present in the TAG but do not become path-critical.
             _ = peripheral_ids
 
     with open(f"VERTICES_T{t}.CSV", "w") as f:
@@ -786,6 +789,21 @@ class IDSAlertSimulator:
 
         all_nodes_list = list(all_nodes) if all_nodes else [f"h{i}" for i in range(1, self.num_hosts + 1)]
 
+        # ── Realistic IDS sensor coverage ──────────────────────────
+        # Real networks do not have 100% host monitoring.  We limit
+        # each window's monitored set to ~70% of its hosts so that
+        # blind-spot analysis reflects genuine sensor gaps rather
+        # than a simulation artifact.
+        MONITOR_RATE = 0.70
+        monitored_per_window = {}
+        for t in range(1, time_windows + 1):
+            hosts_in_window = list(G_by_window.get(t, nx.DiGraph()).nodes())
+            if not hosts_in_window:
+                monitored_per_window[t] = set()
+                continue
+            k = max(1, int(len(hosts_in_window) * MONITOR_RATE))
+            monitored_per_window[t] = set(random.sample(hosts_in_window, k))
+
         # Generate structural attack campaigns (random walks)
         num_campaigns = random.randint(45, 60)
         for i in range(num_campaigns):
@@ -814,19 +832,28 @@ class IDSAlertSimulator:
                 path.append(curr)
             
             if len(path) > 1:
-                self.simulate_alerts_for_path(window, path)
+                # Filter path to only include edges where dest is monitored
+                monitored = monitored_per_window.get(window, set())
+                visible_path = [path[0]]
+                for node in path[1:]:
+                    if node in monitored:
+                        visible_path.append(node)
+                if len(visible_path) > 1:
+                    self.simulate_alerts_for_path(window, visible_path)
 
-        # Mix in internal noise alerts so every alert still maps to TAG hosts.
+        # Mix in internal noise alerts — only for monitored hosts.
         num_noise = max(50, int(len(self.alerts) * 0.35))
         for _ in range(num_noise):
             if time_windows > 1 and random.random() < 0.18:
                 window = 1
             else:
                 window = random.randint(2, time_windows) if time_windows > 1 else 1
-            if len(all_nodes_list) < 2:
+            monitored = monitored_per_window.get(window, set())
+            if len(monitored) < 2:
                 continue
-            src_host = random.choice(all_nodes_list)
-            dst_choices = [node for node in all_nodes_list if node != src_host]
+            monitored_list = list(monitored)
+            src_host = random.choice(monitored_list)
+            dst_choices = [node for node in monitored_list if node != src_host]
             if not dst_choices:
                 continue
             dst_host = random.choice(dst_choices)
@@ -885,7 +912,7 @@ simulator.simulate_from_temporal_graph(time_windows)
 simulator.print_summary()
 simulator.save_alerts(IDS_OUTPUT_DIR / "ids_alerts.csv")
 
-# Ensure every TAG host appears in alerts
+# Ensure CVE_INFO has entries for all CVEs referenced in host_cves_map
 all_cves_in_map    = {cve for cves in host_cves_map.values() for cve in cves}
 missing_cve_info   = sorted(all_cves_in_map - set(CVE_INFO.keys()))
 if missing_cve_info:
@@ -893,48 +920,13 @@ if missing_cve_info:
         CVE_INFO[cve_id] = {"name": f"CVE {cve_id}", "severity": "HIGH"}
     print(f"Added {len(missing_cve_info)} CVE_INFO placeholders.")
 
-alerts_df     = pd.read_csv(IDS_OUTPUT_DIR / "ids_alerts.csv")
+# Report monitoring gaps (expected — we simulate ~70% sensor coverage)
+alerts_df      = pd.read_csv(IDS_OUTPUT_DIR / "ids_alerts.csv")
 observed_hosts = set(alerts_df["source_host"]) | set(alerts_df["dest_host"])
 all_hosts_set  = set(host_cves_map.keys())
-missing_hosts  = sorted(all_hosts_set - observed_hosts)
-
-if missing_hosts:
-    sim2      = IDSAlertSimulator(num_hosts=len(all_hosts_set), host_cves_map=host_cves_map)
-    new_alerts = []
-    for host in missing_hosts:
-        others = [h for h in all_hosts_set if h != host]
-        other  = random.choice(others) if others else host
-        if host_cves_map.get(host):
-            cve_id      = random.choice(host_cves_map[host])
-            cve_info    = CVE_INFO.get(cve_id, {})
-            attack_type = IDSAlertSimulator.CVE_ATTACK_MAPPING.get(
-                cve_id, cve_info.get("name", f"CVE {cve_id}")
-            )
-            base_sev = IDSAlertSimulator.CVE_SEVERITY.get(cve_id, AlertSeverity.HIGH)
-            severity  = random.choices(
-                list(AlertSeverity),
-                weights=SEVERITY_NOISE[base_sev],
-            )[0]
-        else:
-            cve_id      = None
-            attack_type = "Unclassified Network Attack"
-            severity    = random.choices(
-                list(AlertSeverity),
-                weights=[0.15, 0.35, 0.35, 0.15],
-            )[0]
-        timestamp = sim2.base_time + datetime.timedelta(
-            minutes=random.randint(0, 59),
-            seconds=random.randint(0, 59),
-        )
-        new_alerts.append(
-            sim2.generate_alert(timestamp, other, host, attack_type, severity, cve_id)
-        )
-    if new_alerts:
-        alerts_df = pd.concat([alerts_df, pd.DataFrame(new_alerts)], ignore_index=True)
-        alerts_df.to_csv(IDS_OUTPUT_DIR / "ids_alerts.csv", index=False)
-        print(f"Added {len(new_alerts)} alerts to cover missing hosts.")
-else:
-    print("All TAG hosts already appear in IDS alerts.")
+unmonitored    = sorted(all_hosts_set - observed_hosts)
+print(f"Hosts with alert coverage : {len(observed_hosts & all_hosts_set)}/{len(all_hosts_set)}")
+print(f"Unmonitored hosts (sensor gap): {len(unmonitored)}")
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -2468,6 +2460,16 @@ def compute_betweenness_per_window(graphs):
     print(f"  OK Combined graph      : {combined.number_of_nodes()} nodes, "
           f"{combined.number_of_edges()} edges")
     print(f"  OK Max betweenness     : {max_bc:.4f}")
+
+    # ── Re-normalize to [0, 1] relative to max_bc ─────────────────
+    # NetworkX normalizes by (n-1)*(n-2), producing near-zero values
+    # in sparse graphs.  Dividing by max_bc gives the hub node 1.0
+    # and leaf nodes proportionally smaller values, so the STS weight
+    # (0.25) covers the full intended range.
+    if max_bc > 0:
+        combined_bc = {n: v / max_bc for n, v in combined_bc.items()}
+        print(f"  OK Re-normalized BC    : max=1.000, "
+              f"min={min(combined_bc.values()):.4f}")
 
     # Map combined BC values to per-window dicts
     bc_per_window = {}
