@@ -265,35 +265,50 @@ covered_hosts          = set()
 # At least MIN_RETAIN_RATE of T_{i}'s hosts persist into T_{i+1}.
 # This ensures the combined TAG is connected (enabling meaningful
 # betweenness) and creates cross-window chains for Idea 3 / Idea 7.
-# Not all hosts will necessarily appear — real networks don't
-# observe every host in every monitoring period.
+# ALL input hosts are guaranteed to appear in at least one window.
 MIN_RETAIN_RATE = 0.30
 MAX_RETAIN_RATE = 0.50
 
+# Minimum window size so all hosts fit across all windows with retention.
+# Formula: total_hosts = size * (1 + (windows-1) * (1 - retain_rate))
+# Solve:   size = total_hosts / (1 + (windows-1) * (1 - retain_rate))
+import math as _math
+_min_window_size = _math.ceil(
+    total_hosts / (1 + max(1, time_windows - 1) * (1 - MIN_RETAIN_RATE))
+)
+_min_window_size = max(_min_window_size, min_active_hosts)
+
 for i in range(time_windows):
+    remaining_windows = time_windows - i
+    unseen_hosts      = sorted(set(all_hosts) - covered_hosts)
+
+    # Ensure enough unseen hosts get introduced to cover all hosts by the end
+    min_new_needed = _math.ceil(len(unseen_hosts) / remaining_windows) if unseen_hosts else 0
+
     target_count = random.randint(
-        max(min_active_hosts, 8),
-        min(total_hosts, max(min_active_hosts, round(total_hosts * 0.25)))
+        max(_min_window_size, min_new_needed),
+        min(total_hosts, max(_min_window_size, round(total_hosts * 0.75)))
     )
 
     # 1) Retain 30-50% of previous window's hosts
     if previous_active_hosts:
         retain_min   = max(1, round(len(previous_active_hosts) * MIN_RETAIN_RATE))
         retain_max   = max(retain_min, round(len(previous_active_hosts) * MAX_RETAIN_RATE))
-        retain_max   = min(retain_max, len(previous_active_hosts), target_count)
+        retain_max   = min(retain_max, len(previous_active_hosts), target_count - min_new_needed)
+        retain_max   = max(retain_min, retain_max)  # ensure min <= max
         retain_count = random.randint(retain_min, retain_max)
         retained_hosts = set(random.sample(sorted(previous_active_hosts), retain_count))
     else:
         retained_hosts = set()
 
-    # 2) Fill remaining slots with a mix of unseen and returning hosts
-    slots        = target_count - len(retained_hosts)
-    unseen_hosts = sorted(set(all_hosts) - covered_hosts)
+    # 2) Fill remaining slots — unseen hosts get PRIORITY
+    slots = target_count - len(retained_hosts)
 
-    # Try to introduce some unseen hosts (but don't force all 120 in)
-    new_count = min(len(unseen_hosts), max(1, slots // 2)) if unseen_hosts and slots > 0 else 0
-    new_hosts = set(random.sample(unseen_hosts, new_count)) if new_count else set()
+    # Unseen first: use as many slots as needed to guarantee full coverage
+    new_count = min(len(unseen_hosts), slots)
+    new_hosts = set(random.sample(unseen_hosts, new_count)) if new_count > 0 else set()
 
+    # Any leftover slots go to returning hosts
     slots = target_count - len(retained_hosts) - len(new_hosts)
     available = sorted(set(all_hosts) - retained_hosts - new_hosts)
     returning_count = min(slots, len(available)) if slots > 0 else 0
@@ -380,21 +395,15 @@ for t in range(1, time_windows + 1):
                 add_edge(from_id, to_id)
         else:
             # ── Hub-and-spoke topology ──────────────────────────────
-            # First ~20% of nodes are hubs; the rest are leaves.
-            # All inter-leaf traffic routes through hubs, creating
-            # 10-50x betweenness differentiation between hub and leaf
-            # nodes.  This gives the STS betweenness component real
+            # First ~20% of nodes are hubs; ALL remaining nodes are
+            # leaves connected to at least one hub.  Every node gets
+            # at least one edge so all hosts appear in Neo4j.
+            # Hub nodes will have 10-50x higher betweenness than
+            # leaves, giving the STS betweenness component real
             # discriminating power.
-            peripheral_count = max(1, n_verts // 5)
-            if n_verts - peripheral_count < 3:
-                peripheral_count = max(0, n_verts - 3)
-
-            connectable_ids  = vertex_ids[:n_verts - peripheral_count] if peripheral_count else vertex_ids
-            peripheral_ids   = vertex_ids[n_verts - peripheral_count:] if peripheral_count else []
-
-            num_hubs  = max(2, len(connectable_ids) // 5)
-            hub_ids   = connectable_ids[:num_hubs]
-            leaf_ids  = connectable_ids[num_hubs:]
+            num_hubs  = max(2, n_verts // 5)
+            hub_ids   = vertex_ids[:num_hubs]
+            leaf_ids  = vertex_ids[num_hubs:]
 
             # 1) Sequential backbone chain between hubs
             for h1, h2 in zip(hub_ids, hub_ids[1:]):
@@ -406,21 +415,27 @@ for t in range(1, time_windows + 1):
                 for leaf in random.sample(leaf_ids, leaf_fanout):
                     add_edge(hub, leaf)
 
-            # 3) A few cross-hub shortcuts for realism (≤30% of hubs)
+            # 3) Ensure EVERY leaf has at least one edge to a hub
+            for leaf in leaf_ids:
+                # Check if this leaf already has any edge
+                has_edge = any(
+                    (leaf == s or leaf == d)
+                    for s, d in existing_edges
+                )
+                if not has_edge:
+                    add_edge(random.choice(hub_ids), leaf)
+
+            # 4) A few cross-hub shortcuts for realism (≤30% of hubs)
             for hub in hub_ids:
                 if random.random() < 0.30:
                     other_hubs = [h for h in hub_ids if h != hub]
                     if other_hubs:
                         add_edge(hub, random.choice(other_hubs))
 
-            # 4) Sparse leaf-to-hub return edges (≤25% of leaves)
+            # 5) Sparse leaf-to-hub return edges (≤25% of leaves)
             for leaf in leaf_ids:
                 if random.random() < 0.25:
                     add_edge(leaf, random.choice(hub_ids))
-
-            # Peripheral hosts remain vertex-only nodes so they are
-            # present in the TAG but do not become path-critical.
-            _ = peripheral_ids
 
     with open(f"VERTICES_T{t}.CSV", "w") as f:
         for vid in sorted(vertices.keys()):
