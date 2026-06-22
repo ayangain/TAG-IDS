@@ -1,22 +1,15 @@
-3,"execCode(h4, root): CVE-2020-27239",AND,0
-4,"execCode(h5, root): CVE-2021-28851 CVE-2021-30130",AND,0
-7,"execCode(h8, root): CVE-2020-14145 CVE-2021-30129",AND,0
-10,"execCode(h11, root): CVE-2020-11084",AND,0
-11,"execCode(h12, root): CVE-2020-1470",AND,0
-12,"execCode(h13, root): CVE-2020-1938 CVE-2021-22570",AND,0
-17,"execCode(h18, root): CVE-2021-24512 CVE-2020-15999",AND,0
-18,"execCode(h19, root): CVE-2021-23841",AND,0
-20,"execCode(h21, root): CVE-2021-26851 CVE-2021-28850",AND,0
-29,"execCode(h30, root): CVE-2021-27065 CVE-2021-41773",AND,0
-30,"execCode(h31, root): CVE-2020-1470 CVE-2021-30133",AND,0
-31,"execCode(h32, root): CVE-2021-3130",AND,0
-33,"execCode(h34, root): CVE-2021-3129 CVE-2021-40347",AND,0
-34,"execCode(h35, root): CVE-2021-26855 CVE-2020-7961",AND,0
-35,"execCode(h36, root): CVE-2021-22569 CVE-2021-1234",AND,0
-36,"execCode(h37, root): CVE-2020-8557",AND,0
-37,"execCode(h38, root): CVE-2021-3129",AND,0
-40,"execCode(h41, root): CVE-2021-22570",AND,0
-42,"execCode(h43, root): CVE-2020-27238 CVE-2021-22569",AND,0
-43,"execCode(h44, root): CVE-2021-22569",AND,0
-44,"execCode(h45, root): CVE-2021-30130",AND,0
-46,"execCode(h47, root): CVE-2021-24410 CVE-2021-32075",AND,0
+0,"execCode(h1, root): CVE-2021-22570 CVE-2020-14145",AND,0
+2,"execCode(h3, root): CVE-2020-15505 CVE-2020-14645",AND,0
+4,"execCode(h5, root): CVE-2021-40346 CVE-2020-14145",AND,0
+9,"execCode(h10, root): CVE-2021-24410",AND,0
+11,"execCode(h12, root): CVE-2020-16000",AND,0
+13,"execCode(h14, root): CVE-2021-23879 CVE-2020-8516",AND,0
+14,"execCode(h15, root): CVE-2020-27238 CVE-2020-15505",AND,0
+17,"execCode(h18, root): CVE-2021-28149 CVE-2021-28150",AND,0
+18,"execCode(h19, root): CVE-2021-1234",AND,0
+20,"execCode(h21, root): CVE-2021-27068",AND,0
+26,"execCode(h27, root): CVE-2021-28851 CVE-2021-24514",AND,0
+28,"execCode(h29, root): CVE-2021-28851",AND,0
+38,"execCode(h39, root): CVE-2021-24410",AND,0
+39,"execCode(h40, root): CVE-2020-5411 CVE-2021-27068",AND,0
+43,"execCode(h44, root): CVE-2020-1235 CVE-2020-27239",AND,0
