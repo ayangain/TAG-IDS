@@ -822,10 +822,10 @@ class IDSAlertSimulator:
         # Generate structural attack campaigns (random walks)
         num_campaigns = random.randint(45, 60)
         for i in range(num_campaigns):
-            if time_windows > 1 and random.random() < 0.18:
-                window = 1
+            if time_windows > 1:
+                window = random.randint(1, time_windows)
             else:
-                window = random.randint(2, time_windows) if time_windows > 1 else 1
+                window = 1
             G = G_by_window.get(window)
             
             if G is None or G.number_of_edges() == 0:
@@ -859,10 +859,10 @@ class IDSAlertSimulator:
         # Mix in internal noise alerts — only for monitored hosts.
         num_noise = max(50, int(len(self.alerts) * 0.35))
         for _ in range(num_noise):
-            if time_windows > 1 and random.random() < 0.18:
-                window = 1
+            if time_windows > 1:
+                window = random.randint(1, time_windows)
             else:
-                window = random.randint(2, time_windows) if time_windows > 1 else 1
+                window = 1
             monitored = monitored_per_window.get(window, set())
             if len(monitored) < 2:
                 continue
@@ -1809,12 +1809,29 @@ def save_results(results_df, unmapped_df, total_alerts):
 def fallback_local_paths():
     print("  Building paths locally from ARCS/VERTICES CSVs...")
     arc_files = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
-    graphs    = {}
-
+    vertex_files = sorted(BASE_DIR.glob("VERTICES_T*.CSV"))
+    
+    graphs = {}
+    registry = {}
+    
+    # Load registries (node_id -> host)
+    for vf in vertex_files:
+        window = vf.stem.replace("VERTICES_", "")
+        df = pd.read_csv(vf, header=None, names=["node_id", "label", "type", "value"])
+        registry[window] = {}
+        for _, row in df.iterrows():
+            nid = int(row["node_id"])
+            hosts = re.findall(r"\b(h\d+)\b", str(row["label"]))
+            if hosts:
+                registry[window][nid] = hosts[0]
+                
+    # Load graphs
     for af in arc_files:
         window = af.stem.replace("ARCS_", "")
-        df     = pd.read_csv(af, header=None)
-        G      = nx.DiGraph()
+        df = pd.read_csv(af, header=None)
+        G = nx.DiGraph()
+        for nid in registry.get(window, {}).keys():
+            G.add_node(nid)
         for _, row in df.iterrows():
             try:
                 G.add_edge(int(row.iloc[1]), int(row.iloc[0]))
@@ -1822,29 +1839,49 @@ def fallback_local_paths():
                 continue
         graphs[window] = G
 
-    windows = sorted(graphs.keys())
     all_paths = []
-
-    for i, wi in enumerate(windows):
-        for wj in windows[i:]:
-            combined = nx.compose(graphs[wi], graphs[wj])
-            for src in combined.nodes():
-                for dst in combined.nodes():
-                    if src == dst:
+    
+    # 1. Intra-window paths (within each Tk)
+    for w, G in graphs.items():
+        nodes = list(G.nodes())
+        for src in nodes:
+            for dst in nodes:
+                if src != dst and nx.has_path(G, src, dst):
+                    try:
+                        path = nx.shortest_path(G, src, dst)
+                        all_paths.append({
+                            "nodesOnPath": path,
+                            "relsOnPath": [w] * (len(path) - 1)
+                        })
+                    except nx.NetworkXNoPath:
                         continue
-                    if nx.has_path(combined, src, dst):
-                        try:
-                            path = nx.shortest_path(combined, src, dst)
-                            all_paths.append({
-                                "nodesOnPath": path,
-                                "relsOnPath" : [wj] * (len(path) - 1),
-                            })
-                        except nx.NetworkXNoPath:
-                            continue
 
-    df = pd.DataFrame(all_paths)
-    print(f"  OK Local paths computed: {len(df)}")
-    return df, windows
+    # 2. Inter-window paths (Tk -> Tk+1 forward progression)
+    sorted_windows = sorted(graphs.keys())
+    for i in range(len(sorted_windows) - 1):
+        w1, w2 = sorted_windows[i], sorted_windows[i+1]
+        
+        # Find hosts present in both windows
+        hosts1 = {h: nid for nid, h in registry.get(w1, {}).items()}
+        hosts2 = {h: nid for nid, h in registry.get(w2, {}).items()}
+        bridge_hosts = set(hosts1.keys()).intersection(hosts2.keys())
+        
+        for h in bridge_hosts:
+            nid1, nid2 = hosts1[h], hosts2[h]
+            # Link node in Tk to node in Tk+1 for the same host
+            all_paths.append({
+                "nodesOnPath": [nid1, nid2],
+                "relsOnPath": [f"RETAINED_{w1}_{w2}"]
+            })
+
+    if not all_paths:
+        return pd.DataFrame(columns=["nodesOnPath", "relsOnPath"]), []
+
+    paths_df = pd.DataFrame(all_paths)
+    rel_types = list(set([r for path_rels in paths_df["relsOnPath"] for r in path_rels]))
+    
+    print(f"  OK Local paths computed: {len(paths_df)}")
+    return paths_df, rel_types
 
 def main():
     print("=" * 58)
@@ -1860,21 +1897,9 @@ def main():
         print("\nX No alerts mapped. Check VERTICES_T*.CSV files exist.")
         return
 
-    driver = GraphDatabase.driver(
-        NEO4J_URI,
-        auth=(NEO4J_USER, NEO4J_PASSWORD),
-        connection_timeout=300,
-        max_connection_lifetime=3600,
-        keep_alive=True,
-    )
-    try:
-        raise Exception("Forcing local fallback for Idea 3 to prevent Neo4j OOM")
-        paths_df, rel_types = load_temporal_paths_from_neo4j(driver)
-    except Exception as e:
-        print(f"\n  Neo4j error: {e}\n  Using local fallback...")
-        paths_df, rel_types = fallback_local_paths()
-    finally:
-        driver.close()
+    # Use NetworkX for path enumeration (faster than Neo4j APOC expansion).
+    # TAG creation still uses Neo4j; only path queries run locally.
+    paths_df, rel_types = fallback_local_paths()
 
     path_lookup = build_path_lookup(paths_df)
 
@@ -2024,61 +2049,9 @@ def compute_alerted_nodes(alerts_df, host_index, all_windows):
 def load_path_nodes(all_windows):
     print("\n[4/6] Loading temporal paths for path-critical check...")
 
-    path_nodes  = set()
-    path_edges  = set()
-
-    try:
-        raise Exception("Forcing local fallback for Idea 2 to prevent Neo4j OOM")
-        driver = GraphDatabase.driver(
-            NEO4J_URI,
-            auth=(NEO4J_USER, NEO4J_PASSWORD),
-            connection_timeout=60,
-        )
-        with driver.session() as session:
-            rel_types = session.run(
-                "MATCH ()-[r]->() RETURN DISTINCT type(r) AS relType "
-                "ORDER BY relType"
-            ).value()
-
-            if not rel_types:
-                raise RuntimeError("No relationships in Neo4j.")
-
-            direction = "|".join(f"{rt}>" for rt in sorted(rel_types))
-            query = (
-                "MATCH (a:TAG) "
-                "CALL apoc.path.expandConfig(a, {"
-                "  relationshipFilter: '" + direction + "', "
-                "  labelFilter: 'TAG', minLevel: 1 "
-                "}) YIELD path "
-                "WITH [node IN nodes(path) | node.name] AS nodesOnPath, "
-                "     [rel  IN relationships(path) | type(rel)] AS relsOnPath "
-                "WHERE size(nodesOnPath) >= 2 "
-                "  AND all(i IN range(0, size(relsOnPath)-2) "
-                "          WHERE relsOnPath[i] <= relsOnPath[i+1]) "
-                "RETURN nodesOnPath, relsOnPath"
-            )
-            result = session.run(query).to_df()
-        driver.close()
-
-        for _, row in result.iterrows():
-            nodes = row["nodesOnPath"]
-            for n in nodes:
-                try:
-                    path_nodes.add(int(n))
-                except (ValueError, TypeError):
-                    pass
-            for i in range(len(nodes) - 1):
-                try:
-                    path_edges.add((int(nodes[i]), int(nodes[i + 1])))
-                except (ValueError, TypeError):
-                    pass
-
-        print("  OK Source           : Neo4j")
-        print(f"  OK Path nodes found : {len(path_nodes)}")
-
-    except Exception as e:
-        print(f"  WARN Neo4j unavailable ({e}), using local fallback...")
-        path_nodes, path_edges = _local_path_nodes(all_windows)
+    # Use NetworkX for path enumeration (faster than Neo4j APOC expansion).
+    # TAG creation still uses Neo4j; only path queries run locally.
+    path_nodes, path_edges = _local_path_nodes(all_windows)
 
     return path_nodes, path_edges
 
@@ -4999,18 +4972,16 @@ def build_transition_matrix(graph, all_nodes, registry=None):
 
     Uses **directed** edges only to preserve the DAG property.
     Temporal weighting concentrates mass along forward attack paths:
-      - Forward-in-time transitions (src_window < dst_window): weight 5.0
+      - Forward-in-time transitions (src_window < dst_window): weight 10.0
       - Same-window transitions: weight 2.0
-      - Backward-in-time transitions (src_window > dst_window): weight 0.1
-      - Self-loop: weight 1.0
+      - Backward-in-time transitions (src_window > dst_window): weight 0.01
+      - Self-loop: weight 0.5
 
     Sink-node teleportation:
       Nodes with 0 outgoing DAG edges would trap all belief mass.
       For these nodes, we add weighted teleportation transitions to
-      every node in a strictly later temporal window, modelling the
-      attacker completing one exploit phase and moving to the next.
-      Teleportation weight decays with temporal distance so that the
-      immediately next window is most probable.
+      every node in the immediately next temporal window. This prevents
+      belief from scattering across the entire graph.
 
     Weights are then row-normalised to form a proper stochastic matrix.
     """
@@ -5029,10 +5000,10 @@ def build_transition_matrix(graph, all_nodes, registry=None):
 
     n_windows = len(set(node_time.values()))
 
-    FORWARD_WEIGHT  = 5.0   # strong preference for forward progression
+    FORWARD_WEIGHT  = 10.0  # strong preference for forward progression
     SAME_WEIGHT     = 2.0   # moderate for same-window moves
-    BACKWARD_WEIGHT = 0.1   # heavily penalise backward moves
-    SELF_WEIGHT     = 1.0   # baseline self-loop
+    BACKWARD_WEIGHT = 0.01  # heavily penalise backward moves
+    SELF_WEIGHT     = 0.5   # baseline self-loop
 
     for i, node in enumerate(all_nodes):
         successors = [s for s in graph.successors(node)
@@ -5063,10 +5034,9 @@ def build_transition_matrix(graph, all_nodes, registry=None):
                     continue
                 dst_t = node_time[other]
                 if dst_t > src_t:
-                    # Weight decays with temporal distance:
-                    # next window = 3.0, two ahead = 1.5, three ahead = 1.0
                     gap = dst_t - src_t
-                    T[i, j] += 3.0 / gap
+                    if gap == 1:
+                        T[i, j] += 3.0
                 elif dst_t == src_t:
                     # Same window peers: very low weight
                     T[i, j] += 0.05
@@ -5133,7 +5103,7 @@ def build_static_transition_matrix(graph, all_nodes):
 
 
 def forward_inference(T, node_idx, all_nodes, alert_sequence,
-                      observed_mask, detection_prob=0.95, noise_prob=0.001):
+                      observed_mask, detection_prob=0.95, noise_prob=0.001, registry=None):
     """Forward algorithm for attacker position inference.
 
     Includes numerical stability guards:
@@ -5180,6 +5150,16 @@ def forward_inference(T, node_idx, all_nodes, alert_sequence,
             if obs_idx is not None:
                 likelihood = np.full(n, noise_prob, dtype=np.float64)
                 likelihood[obs_idx] = detection_prob
+                
+                # Window-coherence boost for temporal tracking
+                if registry is not None:
+                    _, current_window = _node_temporal_index(all_nodes[obs_idx], registry)
+                    if current_window is not None:
+                        window_nodes = registry.get(current_window, {}).keys()
+                        for wn in window_nodes:
+                            if wn in node_idx and wn != all_nodes[obs_idx]:
+                                likelihood[node_idx[wn]] *= 2.0
+                                
                 belief = belief * likelihood
                 s = belief.sum()
                 if s > 0:
@@ -5294,7 +5274,7 @@ def compute_accuracy_metrics(alert_sequence, predictions, beliefs,
 # ── 6. Sparsity experiments ─────────────────────────────────────
 
 def run_experiments(sequences, combined, all_nodes, T_mat, node_idx,
-                    nid_to_host, T_static=None, static_node_idx=None):
+                    nid_to_host, T_static=None, static_node_idx=None, registry=None):
     print("\n[3/6] Running sparsity experiments...")
 
     all_results = []
@@ -5328,7 +5308,7 @@ def run_experiments(sequences, combined, all_nodes, T_mat, node_idx,
 
                 # ── TAG-based forward inference ──
                 beliefs, map_preds, top_k = forward_inference(
-                    T_mat, node_idx, all_nodes, seq, observed_mask)
+                    T_mat, node_idx, all_nodes, seq, observed_mask, registry=registry)
 
                 tag_metrics = compute_accuracy_metrics(
                     seq, map_preds, beliefs, top_k,
@@ -5726,7 +5706,7 @@ def main():
 
     results_df = run_experiments(
         sequences, combined, all_nodes, T_mat, node_idx, nid_to_host,
-        T_static=T_static, static_node_idx=static_node_idx)
+        T_static=T_static, static_node_idx=static_node_idx, registry=registry)
 
     if results_df.empty:
         print("\nX No experiment results. Check alert sequences.")
