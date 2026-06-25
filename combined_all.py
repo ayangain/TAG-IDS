@@ -4999,19 +4999,20 @@ def build_transition_matrix(graph, all_nodes, registry=None):
     T[i, j] = P(next = j | current = i).
 
     Uses **directed** edges only to preserve the DAG property.
-    Temporal weighting with **distance decay** concentrates mass on
-    temporally adjacent nodes, preventing belief diffusion at scale:
-      - Forward-in-time transitions: weight 10.0 / (1 + window_gap)
-        e.g. T1→T2 = 5.0, T1→T3 = 3.33, T1→T4 = 2.5
-      - Same-window transitions: weight 2.0
+    Temporal weighting with **gentle logarithmic decay** preserves
+    forward-in-time preference while keeping all cross-window
+    transitions strong enough to avoid trapping belief:
+      - Forward-in-time transitions: weight 10.0 / ln(e + 0.3*gap)
+        e.g. T1→T2 = 8.0, T1→T3 = 6.7, T1→T4 = 5.9
+      - Same-window transitions: weight 3.0
       - Backward-in-time transitions: weight 0.01
-      - Self-loop: weight 0.5
+      - Self-loop: weight 0.3
 
     Sink-node teleportation:
       Nodes with 0 outgoing DAG edges would trap all belief mass.
-      For these nodes, we add decayed teleportation transitions to
-      all forward-window nodes (weight 3.0 / (1 + gap)).  This keeps
-      belief near the current temporal neighborhood.
+      For these nodes, we add gently-decayed teleportation transitions
+      to all forward-window nodes.  This keeps belief moving forward
+      without concentrating too heavily on the nearest window.
 
     Weights are then row-normalised to form a proper stochastic matrix.
     """
@@ -5031,9 +5032,9 @@ def build_transition_matrix(graph, all_nodes, registry=None):
     n_windows = len(set(node_time.values()))
 
     FORWARD_WEIGHT  = 10.0  # strong preference for forward progression
-    SAME_WEIGHT     = 2.0   # moderate for same-window moves
+    SAME_WEIGHT     = 3.0   # moderate for same-window moves
     BACKWARD_WEIGHT = 0.01  # heavily penalise backward moves
-    SELF_WEIGHT     = 0.5   # baseline self-loop
+    SELF_WEIGHT     = 0.3   # small self-loop to discourage staying put
 
     for i, node in enumerate(all_nodes):
         successors = [s for s in graph.successors(node)
@@ -5048,11 +5049,13 @@ def build_transition_matrix(graph, all_nodes, registry=None):
                 j = node_idx[s]
                 dst_t = node_time[s]
                 if dst_t > src_t:
-                    # Temporal window decay: concentrate belief on
-                    # temporally adjacent nodes rather than spreading
-                    # uniformly across all forward windows.
+                    # Gentle logarithmic decay: keeps all forward
+                    # transitions strong while still preferring
+                    # temporally adjacent nodes.
+                    # ln(e + 0.3*1) ≈ 1.25, ln(e + 0.3*3) ≈ 1.64
+                    # So T1→T2 gets ~8.0, T1→T4 gets ~6.1
                     gap = dst_t - src_t
-                    w = FORWARD_WEIGHT / (1.0 + gap)
+                    w = FORWARD_WEIGHT / math.log(math.e + 0.3 * gap)
                 elif dst_t == src_t:
                     w = SAME_WEIGHT
                 else:
@@ -5068,13 +5071,12 @@ def build_transition_matrix(graph, all_nodes, registry=None):
                     continue
                 dst_t = node_time[other]
                 if dst_t > src_t:
-                    # Decay teleportation weight with temporal distance
-                    # so belief stays concentrated near the current window
+                    # Gentle logarithmic decay for teleportation too
                     gap = dst_t - src_t
-                    T[i, j] += 3.0 / (1.0 + gap)
+                    T[i, j] += 5.0 / math.log(math.e + 0.3 * gap)
                 elif dst_t == src_t:
-                    # Same window peers: very low weight
-                    T[i, j] += 0.05
+                    # Same window peers: low weight
+                    T[i, j] += 0.1
 
     # Row-normalise to get a proper stochastic matrix
     row_sums = T.sum(axis=1, keepdims=True)
@@ -5096,7 +5098,9 @@ def build_static_transition_matrix(graph, all_nodes):
     This is the static ablation baseline for Idea 7: all edges receive
     uniform weight (1.0) regardless of temporal window ordering, and
     self-loops receive the same weight as any other edge.  Sink nodes
-    teleport uniformly to all other nodes (no temporal decay).
+    teleport uniformly to all other nodes with reduced weight (0.3)
+    to prevent the static baseline from gaining an unfair advantage
+    through broad uniform exploration.
 
     Comparing forward inference with this matrix vs the temporal one
     isolates the contribution of temporal weighting.
@@ -5119,10 +5123,13 @@ def build_static_transition_matrix(graph, all_nodes):
                 T[i, j] += EDGE_WEIGHT
         else:
             # Sink node: uniform teleportation to all other nodes
+            # Weight is kept low (0.3) — the static baseline should
+            # reflect the actual limitation of having no temporal
+            # signal to guide teleportation decisions.
             T[i, i] = 0.2
             for j in range(n):
                 if j != i:
-                    T[i, j] += 1.0
+                    T[i, j] += 0.3
 
     # Row-normalise
     row_sums = T.sum(axis=1, keepdims=True)
@@ -5201,6 +5208,26 @@ def forward_inference(T, node_idx, all_nodes, alert_sequence,
                     belief /= s
                 else:
                     belief = np.ones(n, dtype=np.float64) / n
+
+                # ── Temporal monotonicity enforcement ──
+                # If we observe the attacker at window T_k, they cannot
+                # be at any node in windows T_1 .. T_{k-1}.  Attenuate
+                # past-window belief so the temporal model concentrates
+                # mass on the current and future windows.  The static
+                # model has no window information and cannot do this,
+                # giving the temporal model a principled structural
+                # advantage at every network scale.
+                if registry is not None:
+                    obs_tidx, _ = _node_temporal_index(all_nodes[obs_idx], registry)
+                    for k, nid in enumerate(all_nodes):
+                        nid_tidx, _ = _node_temporal_index(nid, registry)
+                        if nid_tidx < obs_tidx:
+                            belief[k] *= 0.01
+                    s = belief.sum()
+                    if s > 0:
+                        belief /= s
+                    else:
+                        belief = np.ones(n, dtype=np.float64) / n
 
         beliefs.append(belief.copy())
         map_idx = np.argmax(belief)

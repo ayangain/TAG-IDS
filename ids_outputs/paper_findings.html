@@ -94,13 +94,13 @@
             <strong>Warning:</strong> Static IDS tools intrinsically fail to detect dynamic blind spots because they lack a temporal graph model, leading to unmonitored risk exposures.
         </div>
         <div class="metric-grid">
-            <div class="metric-box"><div class="metric-label">Avg Blind Spot Ratio</div><div class="metric-value">37.8%</div></div>
-            <div class="metric-box"><div class="metric-label">Peak Blind Spot Ratio</div><div class="metric-value">42.9% <span class="badge">Window T2</span></div></div>
-            <div class="metric-box"><div class="metric-label">Avg IDS Coverage</div><div class="metric-value">62.2%</div></div>
+            <div class="metric-box"><div class="metric-label">Avg Blind Spot Ratio</div><div class="metric-value">39.7%</div></div>
+            <div class="metric-box"><div class="metric-label">Peak Blind Spot Ratio</div><div class="metric-value">53.8% <span class="badge">Window T1</span></div></div>
+            <div class="metric-box"><div class="metric-label">Avg IDS Coverage</div><div class="metric-value">60.3%</div></div>
         </div>
         <ul>
             <li><span class="highlight">Path-Critical Blind Spots:</span> Identified 0 nodes that are on active attack paths but invisible to the IDS (remain exploitable).</li>
-            <li><span class="highlight">Dynamic Blind Spots:</span> Identified 3 nodes that are monitored in one window but become functionally blind in the next due to temporal topology shifts.</li>
+            <li><span class="highlight">Dynamic Blind Spots:</span> Identified 10 nodes that are monitored in one window but become functionally blind in the next due to temporal topology shifts.</li>
         </ul>
     </div>
 
@@ -112,8 +112,8 @@
         <table>
             <thead><tr><th>Triage Action</th><th>Alerts</th><th>Percentage</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td><span class="highlight">Promoted</span></td><td>31.0</td><td>27.2%</td><td>Deprioritized by CVSS, but highly path-critical in TAG.</td></tr>
-                <tr><td><span class="highlight">Demoted</span></td><td>77.0</td><td>67.5%</td><td>High-severity alerts localized on structurally isolated dead-ends.</td></tr>
+                <tr><td><span class="highlight">Promoted</span></td><td>29.0</td><td>25.7%</td><td>Deprioritized by CVSS, but highly path-critical in TAG.</td></tr>
+                <tr><td><span class="highlight">Demoted</span></td><td>72.0</td><td>63.7%</td><td>High-severity alerts localized on structurally isolated dead-ends.</td></tr>
             </tbody>
         </table>
         <ul><li><span class="highlight">Correlation:</span> Pearson correlation between CVSS and STS is robust at <strong>N/A</strong>.</li></ul>
@@ -125,8 +125,8 @@
             <strong>Important:</strong> Analyzing any single window using static IDS methodologies completely misses the trajectory of persistent temporal exposure.
         </div>
         <ul>
-            <li><span class="highlight">Chronic Risk Nodes:</span> The analysis identified 8 chronic risk nodes (persistent AND path-critical). The highest risk node (<code>6</code>) achieved a maximum exposure score of 6.000 (Tier: <span class="badge">HIGH_CHRONIC</span>).</li>
-            <li><span class="highlight">Persistence Spread:</span> 12 CVE-host pairs (40.0%) persist across multiple time windows with an average span of 1.60 windows.</li>
+            <li><span class="highlight">Chronic Risk Nodes:</span> The analysis identified 19 chronic risk nodes (persistent AND path-critical). The highest risk node (<code>11</code>) achieved a maximum exposure score of 6.000 (Tier: <span class="badge">HIGH_CHRONIC</span>).</li>
+            <li><span class="highlight">Persistence Spread:</span> 32 CVE-host pairs (97.0%) persist across multiple time windows with an average span of 2.52 windows.</li>
             <li><span class="highlight">Peak Exposure:</span> Peak attack surface exposure predictably occurs early in window N/A.</li>
         </ul>
     </div>
@@ -137,13 +137,13 @@
             <strong>Note:</strong> Static analysis massively overestimates the active attack surface by ignoring the lifecycle state of the CVEs.
         </div>
         <div class="metric-grid">
-            <div class="metric-box"><div class="metric-label">Reachability Drop</div><div class="metric-value">36.5%</div></div>
-            <div class="metric-box"><div class="metric-label">Unpatched CVEs</div><div class="metric-value">18.8%</div></div>
-            <div class="metric-box"><div class="metric-label">Avg Danger Window</div><div class="metric-value">1.75</div></div>
+            <div class="metric-box"><div class="metric-label">Reachability Drop</div><div class="metric-value">41.7%</div></div>
+            <div class="metric-box"><div class="metric-label">Unpatched CVEs</div><div class="metric-value">12.5%</div></div>
+            <div class="metric-box"><div class="metric-label">Avg Danger Window</div><div class="metric-value">1.77</div></div>
         </div>
         <ul>
             <li><span class="highlight">Reachability Pairs (Avg):</span> Dropped from 0.0 (Full-Graph Static) to 0.0 (Lifecycle-Aware).</li>
-            <li><span class="highlight">Unpatched CVEs:</span> 9 pairs remain exploitable throughout the entire simulation and are never patched.</li>
+            <li><span class="highlight">Unpatched CVEs:</span> 6 pairs remain exploitable throughout the entire simulation and are never patched.</li>
         </ul>
     </div>
 
@@ -153,9 +153,9 @@
             <strong>Efficiency:</strong> This is the first formal minimum coverage solution to derive IDS sensor placement directly from a temporal attack graph, maximizing efficiency without compromising observability.
         </div>
         <ul>
-            <li><span class="highlight">Optimal Placement:</span> Only <strong>10 strategically placed sensors (50.0%)</strong> are required to guarantee 100.0% coverage of ALL valid temporal attack paths.</li>
-            <li><span class="highlight">Current Inefficiency:</span> The naive IDS placement utilizes all 13 sensors to achieve the same coverage.</li>
-            <li><span class="highlight">Redeployment Potential:</span> There are 3 excess monitoring nodes that do not contribute to the optimal set. These can be redeployed to gap locations without losing any topological coverage.</li>
+            <li><span class="highlight">Optimal Placement:</span> Only <strong>11 strategically placed sensors (55.0%)</strong> are required to guarantee 100.0% coverage of ALL valid temporal attack paths.</li>
+            <li><span class="highlight">Current Inefficiency:</span> The naive IDS placement utilizes all 16 sensors to achieve the same coverage.</li>
+            <li><span class="highlight">Redeployment Potential:</span> There are 1 excess monitoring nodes that do not contribute to the optimal set. These can be redeployed to gap locations without losing any topological coverage.</li>
         </ul>
     </div>
 
@@ -167,9 +167,9 @@
         <table>
             <thead><tr><th>Model (at 60% Alert Loss)</th><th>Avg Distance</th><th>Exact Match</th><th>Top-3 Accuracy</th></tr></thead>
             <tbody>
-                <tr><td><strong>TAG-IDS</strong></td><td style="color: var(--accent-green); font-weight: 600;">4.77 hops</td><td>3.2%</td><td>14.8%</td></tr>
-                <tr><td>Random Walk Baseline</td><td>3.06 hops</td><td>7.3%</td><td>N/A</td></tr>
-                <tr><td>Last-Seen Baseline</td><td>22.58 hops</td><td>30.0%</td><td>0.0%</td></tr>
+                <tr><td><strong>TAG-IDS</strong></td><td style="color: var(--accent-green); font-weight: 600;">1.92 hops</td><td>3.7%</td><td>17.9%</td></tr>
+                <tr><td>Random Walk Baseline</td><td>2.58 hops</td><td>5.5%</td><td>N/A</td></tr>
+                <tr><td>Last-Seen Baseline</td><td>22.58 hops</td><td>25.8%</td><td>0.0%</td></tr>
             </tbody>
         </table>
         <ul>
@@ -184,22 +184,22 @@
             <strong>Ground Truth Filter:</strong> TAG-IDS completely eliminates topologically impossible sequences, reducing the False Correlation Rate (FCR) to 0% by design.
         </div>
         <ul>
-            <li><span class="highlight">Valid Attack Chains:</span> Out of consecutive alert pairs, 34.0 pairs (53.1%) are structurally valid according to the temporal graph.</li>
-            <li><span class="highlight">Mathematically Impossible:</span> 5.0 pairs (7.8%) are impossible. A standard correlator would incorrectly link these as an ongoing attack.</li>
-            <li><span class="highlight">Best Baseline:</span> <code>time_60min</code> achieved an F1 score of 0.716 with an abysmal False Correlation Rate of <strong>8.2%</strong>.</li>
+            <li><span class="highlight">Valid Attack Chains:</span> Out of consecutive alert pairs, 35.0 pairs (48.6%) are structurally valid according to the temporal graph.</li>
+            <li><span class="highlight">Mathematically Impossible:</span> 19.0 pairs (26.4%) are impossible. A standard correlator would incorrectly link these as an ongoing attack.</li>
+            <li><span class="highlight">Best Baseline:</span> <code>severity_gte_LOW</code> achieved an F1 score of 0.654 with an abysmal False Correlation Rate of <strong>26.4%</strong>.</li>
         </ul>
     </div>
 
     <div class="section-card">
         <h2>8. Temporal Ablation Summary</h2>
         <div class="alert alert-info">
-            <strong>Key Ablation Result:</strong> Collapsing all four observation windows into a single static graph raises the false correlation rate from 0% to 7.8%, confirming that temporal path ordering — not graph structure alone — is responsible for the improvements.
+            <strong>Key Ablation Result:</strong> Collapsing all four observation windows into a single static graph raises the false correlation rate from 0% to 26.4%, confirming that temporal path ordering — not graph structure alone — is responsible for the improvements.
         </div>
         <table>
             <thead><tr><th>Idea</th><th>Static Comparison</th><th>Temporal Value</th><th>Ablation Type</th></tr></thead>
             <tbody>
-                <tr><td><strong>P1: Alert Chains</strong></td><td>Static FCR = 7.8%</td><td>TAG-IDS FCR = 0.0%</td><td>Quantitative</td></tr>
-                <tr><td><strong>Exploratory: Attacker Progress</strong></td><td>Static dist = 1.33 hops</td><td>TAG dist = 4.77 hops</td><td>Quantitative</td></tr>
+                <tr><td><strong>P1: Alert Chains</strong></td><td>Static FCR = 26.4%</td><td>TAG-IDS FCR = 0.0%</td><td>Quantitative</td></tr>
+                <tr><td><strong>Exploratory: Attacker Progress</strong></td><td>Static dist = 1.22 hops</td><td>TAG dist = 1.92 hops</td><td>Quantitative</td></tr>
                 <tr><td><strong>P2: Blind Spots</strong></td><td>Static reports 0% blind spots</td><td>Temporal reveals actual ratio</td><td>Definitional</td></tr>
                 <tr><td><strong>P3: STS Triage</strong></td><td>Static betweenness (no window order)</td><td>Temporal betweenness (ordered)</td><td>Definitional</td></tr>
                 <tr><td><strong>P4: CVE Lifecycle</strong></td><td>FullPairs overestimates</td><td>LCPairs (lifecycle-aware)</td><td>Definitional</td></tr>
