@@ -2000,11 +2000,21 @@ def load_alerts(host_index):
     for (host, window), _nid in host_index.items():
         host_windows.setdefault(host, []).append(window)
 
-    def _pick_window(dest_host):
-        windows = host_windows.get(dest_host, [])
-        return pick_tag_window(windows, WINDOW_POLICY)
+    if "time_window" in df.columns:
+        print("  OK Found actual time_window in alerts data.")
+        def format_tw(x):
+            try:
+                if pd.isna(x): return None
+                return f"T{int(float(x))}"
+            except:
+                return None
+        df["time_window"] = df["time_window"].apply(format_tw)
+    else:
+        def _pick_window(dest_host):
+            windows = host_windows.get(dest_host, [])
+            return pick_tag_window(windows, WINDOW_POLICY)
 
-    df["time_window"] = df["dest_host"].apply(_pick_window)
+        df["time_window"] = df["dest_host"].apply(_pick_window)
 
     print(f"  OK Alerts loaded       : {len(df)}")
     print(f"  OK TAG windows         : {sorted({w for ws in host_windows.values() for w in ws})}")
@@ -2399,11 +2409,19 @@ def assign_time_windows(alerts_df, registry):
         for _nid, host in nodes.items():
             host_windows.setdefault(host, []).append(window)
 
-    def _pick_window(dest_host):
-        windows = host_windows.get(dest_host, [])
-        return pick_tag_window(windows, WINDOW_POLICY)
-
-    df["time_window"] = df["dest_host"].apply(_pick_window)
+    if "time_window" in df.columns:
+        def format_tw(x):
+            try:
+                if pd.isna(x): return None
+                return f"T{int(float(x))}"
+            except:
+                return None
+        df["time_window"] = df["time_window"].apply(format_tw)
+    else:
+        def _pick_window(dest_host):
+            windows = host_windows.get(dest_host, [])
+            return pick_tag_window(windows, WINDOW_POLICY)
+        df["time_window"] = df["dest_host"].apply(_pick_window)
     print(f"  OK TAG windows         : {sorted({w for ws in host_windows.values() for w in ws})}")
     return df
 
