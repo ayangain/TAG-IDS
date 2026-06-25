@@ -1,7 +1,4 @@
 metric_pair,r,p,sig
-max_span vs path_critical,0.233,0.0522,ns
-max_span vs avg_degree,0.005,0.9669,ns
-exposure_score vs path_critical,0.138,0.2554,ns
-exposure_score vs avg_degree,-0.104,0.3908,ns
-critical_CVEs vs path_critical,0.071,0.5597,ns
+max_span vs avg_degree,0.183,0.44,ns
+exposure_score vs avg_degree,0.027,0.9101,ns
 avg_span vs node_windows,1.0,0.0,***
