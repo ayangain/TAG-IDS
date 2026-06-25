@@ -1,5 +1,5 @@
 window,total_nodes,monitored,static_blind_spots,path_critical_blind_spots,total_blind_spots,blind_spot_ratio_pct,path_critical_ratio_pct,coverage_pct
-T1,29,22,0,7,7,24.1,24.1,75.9
-T2,42,12,1,29,30,71.4,69.0,28.6
-T3,36,5,0,31,31,86.1,86.1,13.9
-T4,31,0,0,31,31,100.0,100.0,0.0
+T1,43,32,0,11,11,25.6,25.6,74.4
+T2,41,18,0,23,23,56.1,56.1,43.9
+T3,32,0,0,32,32,100.0,100.0,0.0
+T4,34,0,0,34,34,100.0,100.0,0.0

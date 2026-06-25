@@ -819,17 +819,18 @@ class IDSAlertSimulator:
             k = max(1, int(len(hosts_in_window) * MONITOR_RATE))
             monitored_per_window[t] = set(random.sample(hosts_in_window, k))
 
-        # Generate structural attack campaigns (random walks)
-        num_campaigns = random.randint(45, 60)
-        for i in range(num_campaigns):
-            if time_windows > 1:
-                window = random.randint(1, time_windows)
-            else:
-                window = 1
+        # ── Scale-aware campaign generation ──────────────────────
+        # Scale total campaigns with network size so larger graphs
+        # produce proportionally more alerts.  Guarantee a minimum
+        # number of campaigns PER WINDOW so later windows (esp. T4)
+        # always receive non-zero alert coverage.
+        MIN_CAMPAIGNS_PER_WINDOW = 15
+        num_campaigns = max(60, MIN_CAMPAIGNS_PER_WINDOW * time_windows + self.num_hosts)
+
+        def _run_campaign(window):
             G = G_by_window.get(window)
-            
             if G is None or G.number_of_edges() == 0:
-                continue
+                return
 
             sources = [n for n in G.nodes() if G.in_degree(n) == 0]
             if not sources:
@@ -838,16 +839,18 @@ class IDSAlertSimulator:
             path = []
             curr = random.choice(sources)
             path.append(curr)
-            walk_length = random.randint(3, 7)
+            # Scale walk length with graph size so random walks in
+            # larger graphs are more likely to hit monitored nodes
+            max_walk = max(4, min(10, G.number_of_nodes() // 3))
+            walk_length = random.randint(3, max_walk)
             for _ in range(walk_length - 1):
                 successors = list(G.successors(curr))
                 if not successors:
                     break
                 curr = random.choice(successors)
                 path.append(curr)
-            
+
             if len(path) > 1:
-                # Filter path to only include edges where dest is monitored
                 monitored = monitored_per_window.get(window, set())
                 visible_path = [path[0]]
                 for node in path[1:]:
@@ -855,6 +858,17 @@ class IDSAlertSimulator:
                         visible_path.append(node)
                 if len(visible_path) > 1:
                     self.simulate_alerts_for_path(window, visible_path)
+
+        # Phase 1: Guaranteed minimum campaigns per window
+        for t in range(1, time_windows + 1):
+            for _ in range(MIN_CAMPAIGNS_PER_WINDOW):
+                _run_campaign(t)
+
+        # Phase 2: Additional random campaigns for organic distribution
+        extra_campaigns = num_campaigns - (MIN_CAMPAIGNS_PER_WINDOW * time_windows)
+        for _ in range(max(0, extra_campaigns)):
+            window = random.randint(1, time_windows) if time_windows > 1 else 1
+            _run_campaign(window)
 
         # Mix in internal noise alerts — only for monitored hosts.
         num_noise = max(50, int(len(self.alerts) * 0.35))
@@ -1688,10 +1702,6 @@ def classify_alert_pair(node_a, window_a, node_b, window_b, path_lookup):
         debug_count += 1
         
     if arrival is not None:
-        import random
-        if random.random() < 0.80:
-            return IMPOSSIBLE, None
-            
         if window_b >= window_a:
             return VALID, arrival
         else:
@@ -4971,17 +4981,19 @@ def build_transition_matrix(graph, all_nodes, registry=None):
     T[i, j] = P(next = j | current = i).
 
     Uses **directed** edges only to preserve the DAG property.
-    Temporal weighting concentrates mass along forward attack paths:
-      - Forward-in-time transitions (src_window < dst_window): weight 10.0
+    Temporal weighting with **distance decay** concentrates mass on
+    temporally adjacent nodes, preventing belief diffusion at scale:
+      - Forward-in-time transitions: weight 10.0 / (1 + window_gap)
+        e.g. T1→T2 = 5.0, T1→T3 = 3.33, T1→T4 = 2.5
       - Same-window transitions: weight 2.0
-      - Backward-in-time transitions (src_window > dst_window): weight 0.01
+      - Backward-in-time transitions: weight 0.01
       - Self-loop: weight 0.5
 
     Sink-node teleportation:
       Nodes with 0 outgoing DAG edges would trap all belief mass.
-      For these nodes, we add weighted teleportation transitions to
-      every node in the immediately next temporal window. This prevents
-      belief from scattering across the entire graph.
+      For these nodes, we add decayed teleportation transitions to
+      all forward-window nodes (weight 3.0 / (1 + gap)).  This keeps
+      belief near the current temporal neighborhood.
 
     Weights are then row-normalised to form a proper stochastic matrix.
     """
@@ -5018,7 +5030,11 @@ def build_transition_matrix(graph, all_nodes, registry=None):
                 j = node_idx[s]
                 dst_t = node_time[s]
                 if dst_t > src_t:
-                    w = FORWARD_WEIGHT
+                    # Temporal window decay: concentrate belief on
+                    # temporally adjacent nodes rather than spreading
+                    # uniformly across all forward windows.
+                    gap = dst_t - src_t
+                    w = FORWARD_WEIGHT / (1.0 + gap)
                 elif dst_t == src_t:
                     w = SAME_WEIGHT
                 else:
@@ -5034,9 +5050,10 @@ def build_transition_matrix(graph, all_nodes, registry=None):
                     continue
                 dst_t = node_time[other]
                 if dst_t > src_t:
+                    # Decay teleportation weight with temporal distance
+                    # so belief stays concentrated near the current window
                     gap = dst_t - src_t
-                    if gap == 1:
-                        T[i, j] += 3.0
+                    T[i, j] += 3.0 / (1.0 + gap)
                 elif dst_t == src_t:
                     # Same window peers: very low weight
                     T[i, j] += 0.05
