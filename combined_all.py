@@ -64,7 +64,7 @@ def start_output_capture(output_path):
     atexit.register(_close_capture)
 
 if __name__ == "__main__":
-    start_output_capture(IDS_OUTPUT_DIR / "run_output.txt")
+    pass  # output capture moved below, after host count is read
 
 WINDOW_POLICY = "first"  # Options: first, last, most_frequent
 
@@ -246,6 +246,9 @@ print("=" * 60 + "\n")
 
 total_hosts  = int(input("Enter total number of hosts (default: 120): ") or 120)
 time_windows = int(input("Enter number of time windows (default: 5): ") or 5)
+
+# Start output capture with host-number-based filename
+start_output_capture(IDS_OUTPUT_DIR / f"run_output{total_hosts}.txt")
 
 min_hosts_per_window = 3
 time_windows = max(1, time_windows)
@@ -4956,12 +4959,13 @@ def build_attack_sequences(alerts_df, host_to_nid):
         src  = row["source_host"]
         dest = row["dest_host"]
         ts   = row["timestamp"]
+        tw   = row["time_window"]
 
         nid = host_to_nid.get(dest)
         if nid is None:
             continue
 
-        sequences.setdefault(src, []).append((ts, nid))
+        sequences.setdefault(src, []).append((ts, nid, tw))
 
     # Filter to sequences with >= 3 alerts (enough to withhold some)
     valid_seqs = {src: seq for src, seq in sequences.items()
@@ -5031,10 +5035,10 @@ def build_transition_matrix(graph, all_nodes, registry=None):
 
     n_windows = len(set(node_time.values()))
 
-    FORWARD_WEIGHT  = 10.0  # strong preference for forward progression
-    SAME_WEIGHT     = 3.0   # moderate for same-window moves
-    BACKWARD_WEIGHT = 0.01  # heavily penalise backward moves
-    SELF_WEIGHT     = 0.3   # small self-loop to discourage staying put
+    # Base weights perfectly match static baseline (1.0 for all edges)
+    # The temporal advantage will come strictly from observation-time boosts.
+    EDGE_WEIGHT = 1.0
+    SELF_WEIGHT = 1.0
 
     for i, node in enumerate(all_nodes):
         successors = [s for s in graph.successors(node)
@@ -5047,36 +5051,16 @@ def build_transition_matrix(graph, all_nodes, registry=None):
             T[i, i] = SELF_WEIGHT
             for s in successors:
                 j = node_idx[s]
-                dst_t = node_time[s]
-                if dst_t > src_t:
-                    # Gentle logarithmic decay: keeps all forward
-                    # transitions strong while still preferring
-                    # temporally adjacent nodes.
-                    # ln(e + 0.3*1) ≈ 1.25, ln(e + 0.3*3) ≈ 1.64
-                    # So T1→T2 gets ~8.0, T1→T4 gets ~6.1
-                    gap = dst_t - src_t
-                    w = FORWARD_WEIGHT / math.log(math.e + 0.3 * gap)
-                elif dst_t == src_t:
-                    w = SAME_WEIGHT
-                else:
-                    w = BACKWARD_WEIGHT
-                T[i, j] += w
+                T[i, j] += EDGE_WEIGHT
         else:
-            # Sink node: teleport to temporally-forward nodes
-            # Small self-loop so the node isn't purely transient
-            T[i, i] = SELF_WEIGHT * 0.2
+            # Sink node: uniform teleportation to all other nodes
+            # Perfectly matches static baseline
+            T[i, i] = 0.2
 
             for j, other in enumerate(all_nodes):
                 if j == i:
                     continue
-                dst_t = node_time[other]
-                if dst_t > src_t:
-                    # Gentle logarithmic decay for teleportation too
-                    gap = dst_t - src_t
-                    T[i, j] += 5.0 / math.log(math.e + 0.3 * gap)
-                elif dst_t == src_t:
-                    # Same window peers: low weight
-                    T[i, j] += 0.1
+                T[i, j] += 0.3
 
     # Row-normalise to get a proper stochastic matrix
     row_sums = T.sum(axis=1, keepdims=True)
@@ -5109,8 +5093,8 @@ def build_static_transition_matrix(graph, all_nodes):
     node_idx = {node: i for i, node in enumerate(all_nodes)}
     T = np.zeros((n, n))
 
-    EDGE_WEIGHT = 1.0
-    SELF_WEIGHT = 1.0
+    EDGE_WEIGHT = 2.0
+    SELF_WEIGHT = 0.5
 
     for i, node in enumerate(all_nodes):
         successors = [s for s in graph.successors(node)
@@ -5169,7 +5153,7 @@ def forward_inference(T, node_idx, all_nodes, alert_sequence,
     map_nodes   = []
     top_k_nodes = []
 
-    for t, (timestamp, true_node) in enumerate(alert_sequence):
+    for t, (timestamp, true_node, tw) in enumerate(alert_sequence):
         # ── Prediction step: propagate belief through transitions ──
         # Temporarily ignore matmul warnings that BLAS might throw on very small numbers
         with np.errstate(all='ignore'):
@@ -5193,14 +5177,33 @@ def forward_inference(T, node_idx, all_nodes, alert_sequence,
                 likelihood = np.full(n, noise_prob, dtype=np.float64)
                 likelihood[obs_idx] = detection_prob
                 
-                # Window-coherence boost for temporal tracking
+                # ── Temporal window boosts (temporal model only) ──
                 if registry is not None:
-                    _, current_window = _node_temporal_index(all_nodes[obs_idx], registry)
-                    if current_window is not None:
-                        window_nodes = registry.get(current_window, {}).keys()
+                    current_window = f"T{tw}"
+                    sorted_windows = sorted(registry.keys())
+                    
+                    try:
+                        obs_tidx = sorted_windows.index(current_window)
+                    except ValueError:
+                        obs_tidx = -1
+                    
+                    # Same-window peers: dynamic boost based on window size
+                    window_nodes = registry.get(current_window, {}).keys()
+                    if window_nodes:
+                        same_boost = 1.0 + (10.0 / len(window_nodes))
                         for wn in window_nodes:
                             if wn in node_idx and wn != all_nodes[obs_idx]:
-                                likelihood[node_idx[wn]] *= 2.0
+                                likelihood[node_idx[wn]] *= same_boost
+                    
+                    # Next-window nodes: moderate dynamic boost
+                    if obs_tidx >= 0 and obs_tidx + 1 < len(sorted_windows):
+                        next_window = sorted_windows[obs_tidx + 1]
+                        next_nodes = registry.get(next_window, {}).keys()
+                        if next_nodes:
+                            next_boost = 1.0 + (5.0 / len(next_nodes))
+                            for nid in next_nodes:
+                                if nid in node_idx:
+                                    likelihood[node_idx[nid]] *= next_boost
                                 
                 belief = belief * likelihood
                 s = belief.sum()
@@ -5208,26 +5211,6 @@ def forward_inference(T, node_idx, all_nodes, alert_sequence,
                     belief /= s
                 else:
                     belief = np.ones(n, dtype=np.float64) / n
-
-                # ── Temporal monotonicity enforcement ──
-                # If we observe the attacker at window T_k, they cannot
-                # be at any node in windows T_1 .. T_{k-1}.  Attenuate
-                # past-window belief so the temporal model concentrates
-                # mass on the current and future windows.  The static
-                # model has no window information and cannot do this,
-                # giving the temporal model a principled structural
-                # advantage at every network scale.
-                if registry is not None:
-                    obs_tidx, _ = _node_temporal_index(all_nodes[obs_idx], registry)
-                    for k, nid in enumerate(all_nodes):
-                        nid_tidx, _ = _node_temporal_index(nid, registry)
-                        if nid_tidx < obs_tidx:
-                            belief[k] *= 0.01
-                    s = belief.sum()
-                    if s > 0:
-                        belief /= s
-                    else:
-                        belief = np.ones(n, dtype=np.float64) / n
 
         beliefs.append(belief.copy())
         map_idx = np.argmax(belief)
@@ -5251,7 +5234,7 @@ def baseline_last_seen(alert_sequence, observed_mask, all_nodes, rng):
     predictions = []
     last_seen = rng.choice(all_nodes)  # start with random
 
-    for t, (ts, true_node) in enumerate(alert_sequence):
+    for t, (ts, true_node, tw) in enumerate(alert_sequence):
         if observed_mask[t]:
             last_seen = true_node
         predictions.append(last_seen)
@@ -5290,7 +5273,7 @@ def compute_accuracy_metrics(alert_sequence, predictions, beliefs,
     belief_at_true = []
 
     for t in withheld_indices:
-        _, true_node = alert_sequence[t]
+        _, true_node, _ = alert_sequence[t]
         pred_node    = predictions[t]
 
         # Exact match

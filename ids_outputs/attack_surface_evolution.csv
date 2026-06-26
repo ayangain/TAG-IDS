@@ -1,5 +1,5 @@
 window,active_hosts,active_nodes,active_edges,structural_density,active_cves,critical_cves,path_critical_nodes,total_exposure_score,new_cves,resolved_cves
-T1,13,13,16,1.231,23,9,13,19.0,23,0
-T2,12,12,20,1.667,20,12,12,17.75,9,12
-T3,15,15,36,2.4,24,11,15,20.5,10,6
-T4,10,10,16,1.6,16,7,10,13.25,3,11
+T1,13,13,20,1.538,21,8,13,17.25,21,0
+T2,8,8,12,1.5,14,6,8,11.25,6,13
+T3,13,13,20,1.538,20,4,13,14.75,12,6
+T4,11,11,16,1.455,17,5,9,13.75,6,9

@@ -1,2 +1,2 @@
 method_used,total_paths,total_tag_nodes,optimal_cover_size,current_monitor_size,nodes_in_both,coverage_gap_nodes,excess_monitor_nodes,optimal_path_coverage_pct,current_path_coverage_pct,coverage_gap_pct,optimal_efficiency,current_efficiency
-ILP (exact),44208,20,11,16,10,1,6,100.0,100.0,0.0,0.091,0.062
+ILP (exact),2536,20,9,17,8,1,9,100.0,100.0,0.0,0.111,0.059
