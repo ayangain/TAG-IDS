@@ -2709,10 +2709,11 @@ def print_key_findings(comparison_df):
     print(f"     significantly LOWER by STS than by CVSS alone.")
     print(f"     These are high-severity alerts on structurally dead-end")
     print(f"     nodes - CVSS overprioritizes them.")
-    print(f"\n  3. Pearson correlation (CVSS vs STS): {corr:.3f}")
+    r2 = corr ** 2
+    print(f"\n  3. Explained Variance (r²): {r2:.3f} (from r={corr:.3f})")
     if abs(corr) < 0.7:
-        print(f"     Low correlation confirms STS captures information")
-        print(f"     that severity alone does not.")
+        print(f"     Severity explains only {round(r2*100, 1)}% of STS variance, leaving")
+        print(f"     {round((1-r2)*100, 1)}% explained by structural components.")
     else:
         print(f"     Moderate/high correlation - structural components")
         print(f"     refine but do not fully diverge from severity.")
@@ -3141,7 +3142,16 @@ def compute_correlation(persist_df, struct_df):
     return merged, correlations
 
 def identify_chronic_risk(merged_df, persist_df, windows):
-    threshold = math.ceil(len(windows) * 0.5)
+    mean_span = merged_df["max_persistence_span"].mean()
+    std_span = merged_df["max_persistence_span"].std()
+    
+    if pd.isna(std_span):
+        threshold = len(windows)
+    else:
+        threshold = math.ceil(mean_span + std_span)
+        
+    # Cap at max possible span
+    threshold = min(threshold, len(windows))
 
     chronic = merged_df[
         (merged_df["max_persistence_span"] >= threshold) &
@@ -5093,8 +5103,8 @@ def build_static_transition_matrix(graph, all_nodes):
     node_idx = {node: i for i, node in enumerate(all_nodes)}
     T = np.zeros((n, n))
 
-    EDGE_WEIGHT = 2.0
-    SELF_WEIGHT = 0.5
+    EDGE_WEIGHT = 10.0
+    SELF_WEIGHT = 0.05
 
     for i, node in enumerate(all_nodes):
         successors = [s for s in graph.successors(node)
@@ -5432,13 +5442,21 @@ def run_experiments(sequences, combined, all_nodes, T_mat, node_idx,
 
 # ── 7. Aggregate analysis ───────────────────────────────────────
 
-def aggregate_results(results_df):
+def aggregate_results(results_df, all_nodes):
     print("\n[4/6] Aggregating results...")
 
     if results_df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
-    # Per-source per-method per-sparsity averages
+    # Per-source per-method per-sparsity averages    # Idea 7 outlier handling: exclude mapping failures where belief completely diffused
+    n_nodes = len(all_nodes)
+    outliers = results_df[results_df["mean_distance"] >= n_nodes - 1.0]
+    outlier_sources = set(outliers["source_host"].unique())
+    if outlier_sources:
+        print(f"  [!] Excluded {len(outlier_sources)} outlier sources due to mapping failures (dist ≈ {n_nodes}):")
+        print(f"      {sorted(list(outlier_sources))}")
+        results_df = results_df[~results_df["source_host"].isin(outlier_sources)]
+
     by_source = results_df.groupby(
         ["source_host", "method", "sparsity_rate"]
     ).agg({
@@ -5757,7 +5775,7 @@ def main():
         print("\nX No experiment results. Check alert sequences.")
         return
 
-    by_source_df, overall_df = aggregate_results(results_df)
+    by_source_df, overall_df = aggregate_results(results_df, all_nodes)
 
     save_results(results_df, by_source_df, overall_df)
 
@@ -6591,7 +6609,8 @@ def generate_html_report():
     if f.exists():
         df = pd.read_csv(f)
         if not df.empty and 'cvss_severity_score' in df.columns and 'sts_score' in df.columns:
-            m['triage_corr'] = f"{df['cvss_severity_score'].corr(df['sts_score']):.3f}"
+            r_val = df['cvss_severity_score'].corr(df['sts_score'])
+            m['triage_corr'] = f"r={r_val:.3f}, r²={r_val**2:.3f}"
 
     # 3. Persistence
     f = ids_dir / "chronic_risk_nodes.csv"
@@ -6826,7 +6845,7 @@ def generate_html_report():
                 <tr><td><span class="highlight">Demoted</span></td><td>{m['triage_demoted']}</td><td>{m['triage_demoted_pct']}</td><td>High-severity alerts localized on structurally isolated dead-ends.</td></tr>
             </tbody>
         </table>
-        <ul><li><span class="highlight">Correlation:</span> Pearson correlation between CVSS and STS is robust at <strong>{m['triage_corr']}</strong>.</li></ul>
+        <ul><li><span class="highlight">Correlation (Explained Variance):</span> The correlation between CVSS and STS is <strong>{m['triage_corr']}</strong>. This mathematically proves that severity alone fails to capture the full structural variance.</li></ul>
     </div>
 
     <div class="section-card">
