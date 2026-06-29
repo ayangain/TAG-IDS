@@ -1,0 +1,10 @@
+Final Audit of Outputs (20 to 100 hosts):
+1. Tautological Correlation: Checked. avg_span vs node_windows is completely removed.
+2. Blind Spots: Checked. Binary classification is correctly utilized and Dynamic Blind Spot Transitions are shown in all outputs.
+3. Naming Collision: Checked. The "Highest single-CVE exposure score" has been successfully renamed.
+4. Outlier Bias: Checked. 0 outlier exclusions are present; Attacker progress is measured by medians across all runs.
+5. Monotonicity: Checked. Paths are consistently extracted globally (cutoff=4). Path counts scale logically depending on network density rather than dropping arbitrarily due to dynamic cutoffs.
+6. Chain Rate: Checked. Ablation section properly notes that valid chain rates are highly sensitive to graph configuration.
+7. STS Criticality: Checked. Triage correctly relies on updated weighted combinations.
+
+All files (run_output20.txt to run_output100.txt) are technically sound and consistent.

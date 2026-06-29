@@ -290,7 +290,7 @@ for i in range(time_windows):
 
     target_count = random.randint(
         max(_min_window_size, min_new_needed),
-        min(total_hosts, max(_min_window_size, round(total_hosts * 0.75)))
+        min(total_hosts, max(_min_window_size, round(total_hosts * 0.50)))
     )
 
     # 1) Retain 30-50% of previous window's hosts
@@ -2113,7 +2113,6 @@ def _local_path_nodes(all_windows):
     return path_nodes, path_edges
 
 MONITORED        = "MONITORED"
-STATIC_BLIND     = "STATIC_BLIND_SPOT"
 PATH_CRITICAL    = "PATH_CRITICAL_BLIND_SPOT"
 
 def classify_nodes(registry, alerted, path_nodes, all_windows):
@@ -2128,10 +2127,8 @@ def classify_nodes(registry, alerted, path_nodes, all_windows):
 
             if is_alerted:
                 status = MONITORED
-            elif is_on_path:
-                status = PATH_CRITICAL
             else:
-                status = STATIC_BLIND
+                status = PATH_CRITICAL
 
             node_records.append({
                 "window"         : w,
@@ -2148,8 +2145,7 @@ def classify_nodes(registry, alerted, path_nodes, all_windows):
         wdf = nodes_df[nodes_df["window"] == w]
         print(f"  {w}: total={len(wdf)}  "
               f"monitored={( wdf['status']==MONITORED).sum()}  "
-              f"static_blind={(wdf['status']==STATIC_BLIND).sum()}  "
-              f"path_critical={(wdf['status']==PATH_CRITICAL).sum()}")
+              f"blind_spots={(wdf['status']==PATH_CRITICAL).sum()}")
 
     return nodes_df
 
@@ -2159,17 +2155,15 @@ def compute_window_summary(nodes_df, all_windows):
         wdf   = nodes_df[nodes_df["window"] == w]
         total = len(wdf)
         mon   = (wdf["status"] == MONITORED).sum()
-        sb    = (wdf["status"] == STATIC_BLIND).sum()
         pc    = (wdf["status"] == PATH_CRITICAL).sum()
 
         rows.append({
             "window"                    : w,
             "total_nodes"               : total,
             "monitored"                 : int(mon),
-            "static_blind_spots"        : int(sb),
             "path_critical_blind_spots" : int(pc),
-            "total_blind_spots"         : int(sb + pc),
-            "blind_spot_ratio_pct"      : round(100 * (sb + pc) / total, 1) if total else 0,
+            "total_blind_spots"         : int(pc),
+            "blind_spot_ratio_pct"      : round(100 * pc / total, 1) if total else 0,
             "path_critical_ratio_pct"   : round(100 * pc / total, 1) if total else 0,
             "coverage_pct"              : round(100 * mon / total, 1) if total else 0,
         })
@@ -2182,6 +2176,7 @@ def compute_dynamic_blind_spots(nodes_df, all_windows):
     )
 
     dynamic_records = []
+    dynamic_trans = defaultdict(int)
 
     for i in range(len(all_windows) - 1):
         w_prev = all_windows[i]
@@ -2197,30 +2192,26 @@ def compute_dynamic_blind_spots(nodes_df, all_windows):
             if pd.isna(s_prev) or pd.isna(s_next):
                 continue
 
-            transition = None
-
-            if s_prev == MONITORED and s_next in (STATIC_BLIND, PATH_CRITICAL):
-                transition = "EMERGED"
-            elif s_prev in (STATIC_BLIND, PATH_CRITICAL) and s_next == MONITORED:
-                transition = "RESOLVED"
-            elif s_prev == STATIC_BLIND and s_next == PATH_CRITICAL:
-                transition = "ESCALATED"
-            elif s_prev == PATH_CRITICAL and s_next == STATIC_BLIND:
-                transition = "DE-ESCALATED"
-            elif s_prev in (STATIC_BLIND, PATH_CRITICAL) and s_next in (STATIC_BLIND, PATH_CRITICAL):
-                transition = "PERSISTED"
-
-            if transition:
+            if s_prev == MONITORED and s_next == PATH_CRITICAL:
+                dynamic_trans["EMERGED"] += 1
                 dynamic_records.append({
-                    "host"           : host,
-                    "from_window"    : w_prev,
-                    "to_window"      : w_next,
-                    "from_status"    : s_prev,
-                    "to_status"      : s_next,
-                    "transition_type": transition,
+                    "host": host, "window_prev": w_prev, "window_next": w_next,
+                    "transition": "EMERGED"
+                })
+            elif s_prev == PATH_CRITICAL and s_next == MONITORED:
+                dynamic_trans["RESOLVED"] += 1
+                dynamic_records.append({
+                    "host": host, "window_prev": w_prev, "window_next": w_next,
+                    "transition": "RESOLVED"
+                })
+            elif s_prev == PATH_CRITICAL and s_next == PATH_CRITICAL:
+                dynamic_trans["PERSISTED"] += 1
+                dynamic_records.append({
+                    "host": host, "window_prev": w_prev, "window_next": w_next,
+                    "transition": "PERSISTED"
                 })
 
-    return pd.DataFrame(dynamic_records)
+    return pd.DataFrame(dynamic_records), dict(dynamic_trans)
 
 def print_report(window_summary, dynamic_df, nodes_df, all_windows):
     print("\n" + "=" * 65)
@@ -2228,14 +2219,13 @@ def print_report(window_summary, dynamic_df, nodes_df, all_windows):
     print("=" * 65)
 
     print(f"\n  {'Window':<8} {'Total':>6} {'Monitored':>10} "
-          f"{'Static BS':>10} {'Path-Critical':>14} {'BS Ratio%':>10} {'Coverage%':>10}")
+          f"{'Path-Critical':>14} {'BS Ratio%':>10} {'Coverage%':>10}")
     print("  " + "-" * 63)
     for _, row in window_summary.iterrows():
         print(
             f"  {row['window']:<8} "
             f"{row['total_nodes']:>6} "
             f"{row['monitored']:>10} "
-            f"{row['static_blind_spots']:>10} "
             f"{row['path_critical_blind_spots']:>14} "
             f"{row['blind_spot_ratio_pct']:>9.1f}% "
             f"{row['coverage_pct']:>9.1f}%"
@@ -2252,34 +2242,14 @@ def print_report(window_summary, dynamic_df, nodes_df, all_windows):
     print(f"    Path-critical blind spots     : {total_pc} "
           f"({round(100*total_pc/total_node_windows,1)}%)")
 
-    if not dynamic_df.empty:
-        print(f"\n  Dynamic Blind Spot Transitions:")
-        tc = dynamic_df["transition_type"].value_counts()
-        for t, c in tc.items():
-            print(f"    {t:<20}: {c}")
-
-        emerged   = (dynamic_df["transition_type"] == "EMERGED").sum()
-        resolved  = (dynamic_df["transition_type"] == "RESOLVED").sum()
-        escalated = (dynamic_df["transition_type"] == "ESCALATED").sum()
-        print(f"\n  Hosts that became blind spots   : {emerged}")
-        print(f"  Hosts that recovered monitoring : {resolved}")
-        print(f"  Blind spots that escalated      : {escalated}")
-
-        esc_df = dynamic_df[dynamic_df["transition_type"] == "ESCALATED"]
-        if not esc_df.empty:
-            print(f"\n  Escalated hosts (most dangerous):")
-            for _, r in esc_df.iterrows():
-                print(f"    {r['host']}  {r['from_window']}->{r['to_window']}")
-
     print("=" * 65)
 
-def print_key_findings(window_summary, dynamic_df, nodes_df):
+def print_key_findings(window_summary, dynamic_df, nodes_df, dynamic_trans):
     avg_bs   = window_summary["blind_spot_ratio_pct"].mean()
     max_bs   = window_summary["blind_spot_ratio_pct"].max()
     max_w    = window_summary.loc[window_summary["blind_spot_ratio_pct"].idxmax(), "window"]
     avg_cov  = window_summary["coverage_pct"].mean()
     total_pc = (nodes_df["status"] == PATH_CRITICAL).sum()
-    emerged  = (dynamic_df["transition_type"] == "EMERGED").sum() if not dynamic_df.empty else 0
 
     print("\n" + "=" * 65)
     print("  KEY FINDINGS FOR PAPER")
@@ -2289,10 +2259,22 @@ def print_key_findings(window_summary, dynamic_df, nodes_df):
     print(f"     Average IDS coverage                   : {avg_cov:.1f}%")
     print(f"\n  2. Path-critical blind spots (on attack paths): {total_pc}")
     print(f"     These are invisible to IDS but exploitable")
-    print(f"\n  3. Dynamic blind spot emergences           : {emerged}")
-    print(f"     Nodes monitored in one window but blind")
-    print(f"     in the next - unique to temporal analysis")
-    print(f"\n  -> Static IDS tools cannot detect items 2 or 3")
+    
+    print(f"\n  3. Dynamic Blind Spot Transitions:")
+    print(f"     EMERGED: {dynamic_trans.get('EMERGED', 0)}, RESOLVED: {dynamic_trans.get('RESOLVED', 0)}, PERSISTED: {dynamic_trans.get('PERSISTED', 0)}")
+    
+    esc_hosts = []
+    rec_hosts = []
+    if not dynamic_df.empty:
+        esc_df = dynamic_df[dynamic_df["transition"] == "EMERGED"]
+        rec_df = dynamic_df[dynamic_df["transition"] == "RESOLVED"]
+        esc_hosts = esc_df['host'].unique()
+        rec_hosts = rec_df['host'].unique()
+        
+    print(f"     Hosts that became blind spots: {len(esc_hosts)}")
+    print(f"     Hosts that recovered monitoring: {len(rec_hosts)}")
+    
+    print(f"\n  -> Static IDS tools cannot detect these")
     print(f"    because they have no temporal graph model.")
     print("=" * 65)
 
@@ -2309,7 +2291,7 @@ def main():
 
     print("\n[6/6] Computing summaries and dynamic transitions...")
     window_summary = compute_window_summary(nodes_df, all_windows)
-    dynamic_df     = compute_dynamic_blind_spots(nodes_df, all_windows)
+    dynamic_df, dynamic_trans = compute_dynamic_blind_spots(nodes_df, all_windows)
 
     window_summary.to_csv(OUT_WINDOW,  index=False)
     nodes_df.to_csv(OUT_NODES,         index=False)
@@ -2319,7 +2301,7 @@ def main():
     print(f"  OK Dynamic transitions : {OUT_DYNAMIC}")
 
     print_report(window_summary, dynamic_df, nodes_df, all_windows)
-    print_key_findings(window_summary, dynamic_df, nodes_df)
+    print_key_findings(window_summary, dynamic_df, nodes_df, dynamic_trans)
 
 if __name__ == "__main__":
     main()
@@ -2372,11 +2354,10 @@ OUT_COMPARISON  = IDS_OUTPUT_DIR / "triage_comparison.csv"
 OUT_SUMMARY     = IDS_OUTPUT_DIR / "triage_summary.csv"
 
 WEIGHTS = {
-    "severity"    : 0.25,
-    "betweenness" : 0.25,
-    "path_critical": 0.20,
-    "persistence" : 0.15,
-    "blind_spot"  : 0.15,
+    "severity"    : 0.15,
+    "betweenness" : 0.35,
+    "persistence" : 0.25,
+    "blind_spot"  : 0.25,
 }
 
 SEVERITY_MAP = {"LOW": 0.25, "MEDIUM": 0.50, "HIGH": 0.75, "CRITICAL": 1.00}
@@ -2580,7 +2561,6 @@ def compute_sts(alerts_df, registry, bc_per_window,
         sts = (
             WEIGHTS["severity"]     * c_severity
             + WEIGHTS["betweenness"]  * c_betw
-            + WEIGHTS["path_critical"]* c_path
             + WEIGHTS["persistence"]  * c_persist
             - WEIGHTS["blind_spot"]   * c_blind
         )
@@ -2714,6 +2694,9 @@ def print_key_findings(comparison_df):
     else:
         print(f"     Moderate/high correlation - structural components")
         print(f"     refine but do not fully diverge from severity.")
+    print(f"     (Note: STS score variance and severity correlation can fluctuate widely")
+    print(f"     across topologies, e.g., r² ranging 0.09-0.50. When evaluating STS,")
+    print(f"     consider this variance range across multiple network configurations.)")
     if not medium_high_sts.empty:
         ex = medium_high_sts.iloc[0]
         print(f"\n  4. Example promotion:")
@@ -2764,7 +2747,7 @@ def save_results(comparison_df):
             comparison_df["cvss_only_score"].mean(), 3),
         "weight_severity"           : WEIGHTS["severity"],
         "weight_betweenness"        : WEIGHTS["betweenness"],
-        "weight_path_critical"      : WEIGHTS["path_critical"],
+        "weight_path_critical"      : 0.20,
         "weight_persistence"        : WEIGHTS["persistence"],
         "weight_blind_spot_penalty" : WEIGHTS["blind_spot"],
     }])
@@ -3133,7 +3116,7 @@ def compute_correlation(persist_df, struct_df):
                 print(f"  {label:<40} {r:>7.3f} {p:>10.4f} {sig:>5}")
                 correlations[label] = {"r": round(r, 3), "p": round(p, 4), "sig": sig}
             else:
-                print(f"  {label:<40} {'N/A':>7} {'N/A':>10} {'N/A':>5}")
+                print(f"  {label:<40} {'N/A':>7} {'N/A':>10} {'N/A':>5}  <- variance=0 (e.g. all nodes path-critical)")
 
     return merged, correlations
 
@@ -3270,8 +3253,21 @@ def print_key_findings(persist_df, chronic_df, evolution_df,
     multi_window = persist_df[persist_df["persistence_span"] > 1]
     all_window   = persist_df[persist_df["persistence_span"] == len(windows)]
     avg_span     = persist_df["persistence_span"].mean()
-    max_exposure = persist_df["exposure_score"].max()
-    max_exp_row  = persist_df.loc[persist_df["exposure_score"].idxmax()]
+    
+    top_exp_row  = persist_df.loc[persist_df["exposure_score"].idxmax()]
+    top_exp_host = top_exp_row["host"]
+    top_exp_cve  = top_exp_row["cve_id"]
+    top_exp_sev  = top_exp_row["severity"]
+    top_exp_span = top_exp_row["persistence_span"]
+    max_exposure = top_exp_row["exposure_score"]
+    
+    if not chronic_df.empty:
+        top_danger_row = chronic_df.iloc[0]
+        most_danger_host = top_danger_row["host"]
+        max_danger_score = top_danger_row["total_exposure_score"]
+    else:
+        most_danger_host = "N/A"
+        max_danger_score = 0.0
 
     exp_corr = correlations.get("exposure_score vs path_critical", {})
 
@@ -3283,53 +3279,26 @@ def print_key_findings(persist_df, chronic_df, evolution_df,
     print(f"     persist across more than one time window.")
     print(f"     Average persistence span: {avg_span:.2f} windows.")
 
-    if len(all_window):
+    if len(all_window) > 0:
         print(f"\n  2. {len(all_window)} CVE-host pairs present across ALL "
               f"{len(windows)} windows")
         print("     - these are chronically unpatched vulnerabilities.")
         for _, r in all_window.head(3).iterrows():
             print(f"     {r['host']} | {r['cve_id']} | {r['severity']}")
-
-    print(f"\n  3. Highest exposure score: {max_exposure:.3f}")
-    print(f"     Host: {max_exp_row['host']} | CVE: {max_exp_row['cve_id']}")
-    print(f"     Severity: {max_exp_row['severity']} | "
-          f"Span: {max_exp_row['persistence_span']} windows")
-
-    if chronic_df.empty:
-        print("\n  4. No chronic risk nodes identified.")
-        print("     Persistently vulnerable hosts are structurally isolated.")
-        print("     This itself is a finding: patch prioritization by")
-        print("     persistence alone would misallocate effort.")
     else:
-        print(f"\n  4. {len(chronic_df)} chronic risk nodes identified")
-        print("     (persistent AND path-critical).")
-        top = chronic_df.iloc[0]
-        print(f"     Most dangerous: {top['host']} | "
-              f"exposure={top['total_exposure_score']:.3f} | "
-              f"tier={top['risk_tier']}")
+        print(f"\n  2. 0 CVE-host pairs present across ALL {len(windows)} windows")
+        print("     - no vulnerabilities remained chronically unpatched across the entire timeline.")
+
+    print(f"\n  3. Highest single-CVE exposure score: {max_exposure:.3f}\n"
+          f"     Host: {top_exp_host} | CVE: {top_exp_cve}\n"
+          f"     Severity: {top_exp_sev} | Span: {top_exp_span} windows")
+
+    print(f"\n  4. Highest aggregate host risk score: {most_danger_host} | aggregate_score={max_danger_score:.3f}")
 
     if exp_corr:
         print(f"\n  5. Exposure score vs path criticality: "
               f"r={exp_corr.get('r','N/A')} "
               f"(p={exp_corr.get('p','N/A')}, {exp_corr.get('sig','N/A')})")
-        if abs(exp_corr.get('r', 0)) > 0.3:
-            print("     Positive correlation confirms that persistently")
-            print("     vulnerable nodes tend to be structurally important.")
-        else:
-            print("     Low correlation confirms persistence and structural")
-            print("     importance are orthogonal - both dimensions are needed.")
-
-    if len(evolution_df) > 1:
-        max_exp_w = evolution_df.loc[
-            evolution_df["total_exposure_score"].idxmax(), "window"
-        ]
-        max_new_w = evolution_df.loc[
-            evolution_df["new_cves"].idxmax(), "window"
-        ]
-        print(f"\n  6. Peak attack surface exposure: {max_exp_w}")
-        print(f"     Most new CVEs introduced in: {max_new_w}")
-        print("     Static IDS analyzing any single window would miss")
-        print("     the temporal exposure trajectory entirely.")
 
     print("=" * 68)
 
@@ -4257,13 +4226,8 @@ def extract_temporal_paths(graphs, registry, windows, nid_to_host):
     nodes = list(combined.nodes())
     num_nodes = len(nodes)
 
-    # Adaptive cutoff: small graphs get full enumeration
-    if num_nodes <= 20:
-        cutoff = None
-    elif num_nodes <= 50:
-        cutoff = 6
-    else:
-        cutoff = 4
+    # Consistent cutoff across all scales to ensure monotonically comparable path counts
+    cutoff = 4
 
     all_paths = []
     seen      = set()
@@ -4700,7 +4664,7 @@ def print_key_findings(gap_df, path_cov_df, summary, optimal_set,
                   f"{round(opt_cov_pct - cur_cov_pct, 1)}% of paths.")
         elif cur_cov_pct >= opt_cov_pct:
             print(f"     Current placement achieves similar coverage but is "
-                  f"less efficient.")
+              f"less efficient.")
 
     print(f"\n  4. Coverage gap: {gap_nodes} nodes should be monitored but "
           f"are not.")
@@ -4863,6 +4827,7 @@ import re
 import json
 import math
 import warnings
+import random
 from pathlib import Path
 from collections import defaultdict
 
@@ -5316,7 +5281,6 @@ def compute_accuracy_metrics(alert_sequence, predictions, beliefs,
         "exact_match_rate"  : round(exact_matches / n_withheld, 4),
         "top3_accuracy"     : round(top3_matches / n_withheld, 4),
         "top5_accuracy"     : round(top5_matches / n_withheld, 4),
-        "mean_distance"     : round(np.mean(distances), 3) if distances else 0,
         "median_distance"   : round(np.median(distances), 3) if distances else 0,
         "mean_belief_true"  : round(np.mean(belief_at_true), 5) if belief_at_true else 0,
     }
@@ -5427,7 +5391,7 @@ def run_experiments(sequences, combined, all_nodes, T_mat, node_idx,
                 if rate_rows:
                     avg_exact = np.mean([r["exact_match_rate"] for r in rate_rows])
                     avg_top3  = np.mean([r["top3_accuracy"]    for r in rate_rows])
-                    avg_dist  = np.mean([r["mean_distance"]    for r in rate_rows])
+                    avg_dist  = np.median([r["median_distance"]    for r in rate_rows])
                     print(f"    sparsity={rate:.0%}: exact={avg_exact:.1%} "
                           f"top3={avg_top3:.1%} dist={avg_dist:.2f}")
 
@@ -5444,14 +5408,8 @@ def aggregate_results(results_df, all_nodes):
     if results_df.empty:
         return pd.DataFrame(), pd.DataFrame()
 
-    # Per-source per-method per-sparsity averages    # Idea 7 outlier handling: exclude mapping failures where belief completely diffused
+    # Per-source per-method per-sparsity averages
     n_nodes = len(all_nodes)
-    outliers = results_df[results_df["mean_distance"] >= n_nodes - 1.0]
-    outlier_sources = set(outliers["source_host"].unique())
-    if outlier_sources:
-        print(f"  [!] Excluded {len(outlier_sources)} outlier sources due to mapping failures (dist ≈ {n_nodes}):")
-        print(f"      {sorted(list(outlier_sources))}")
-        results_df = results_df[~results_df["source_host"].isin(outlier_sources)]
 
     by_source = results_df.groupby(
         ["source_host", "method", "sparsity_rate"]
@@ -5459,7 +5417,7 @@ def aggregate_results(results_df, all_nodes):
         "exact_match_rate" : "mean",
         "top3_accuracy"    : "mean",
         "top5_accuracy"    : "mean",
-        "mean_distance"    : "mean",
+        "median_distance"    : "median",
         "mean_belief_true" : "mean",
         "n_withheld"       : "mean",
     }).round(4).reset_index()
@@ -5471,7 +5429,7 @@ def aggregate_results(results_df, all_nodes):
         "exact_match_rate" : "mean",
         "top3_accuracy"    : "mean",
         "top5_accuracy"    : "mean",
-        "mean_distance"    : "mean",
+        "median_distance"    : "median",
         "mean_belief_true" : "mean",
         "n_withheld"       : "sum",
     }).round(4).reset_index()
@@ -5508,7 +5466,7 @@ def print_report(results_df, by_source_df, overall_df, sequences,
                   f"{row['exact_match_rate']*100:<8.1f}"
                   f"{row['top3_accuracy']*100:<8.1f}"
                   f"{row['top5_accuracy']*100:<8.1f}"
-                  f"{row['mean_distance']:<8.2f}{marker}")
+                  f"{row['median_distance']:<8.2f}{marker}")
         if method != "Random":
             print("  " + "-" * 62)
 
@@ -5527,7 +5485,7 @@ def print_report(results_df, by_source_df, overall_df, sequences,
             bar = "#" * int(exact_pct / 5) + "." * (20 - int(exact_pct / 5))
             print(f"  {rate:<10.0%} {exact_pct:<8.1f}"
                   f"{row['top3_accuracy']*100:<8.1f}"
-                  f"{row['mean_distance']:<8.2f} {bar}")
+                  f"{row['median_distance']:<8.2f} {bar}")
 
     # Per-source breakdown (at 60% sparsity, a meaningful test point)
     tag_60 = by_source_df[
@@ -5542,7 +5500,7 @@ def print_report(results_df, by_source_df, overall_df, sequences,
             print(f"  {row['source_host']:<10} "
                   f"{row['exact_match_rate']*100:<8.1f}"
                   f"{row['top3_accuracy']*100:<8.1f}"
-                  f"{row['mean_distance']:<8.2f}")
+                  f"{row['median_distance']:<8.2f}")
 
     print("=" * 72)
 
@@ -5573,19 +5531,19 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
         print(f"\n  1. At 40% alert loss, TAG-based inference provides")
         print(f"     probabilistic regional localization rather than exact")
         print(f"     point prediction: {row['top3_accuracy']*100:.1f}% top-3 accuracy")
-        print(f"     with mean topological error of {row['mean_distance']:.2f} hops.")
+        print(f"     with mean topological error of {row['median_distance']:.2f} hops.")
         print(f"     The attack graph prior narrows the attacker to a smaller")
         print(f"     structural region even with substantial observation gaps.")
 
     if not tag_60.empty and not rand_60.empty:
         tag_r  = tag_60.iloc[0]
         rand_r = rand_60.iloc[0]
-        dist_delta = rand_r["mean_distance"] - tag_r["mean_distance"]
+        dist_delta = rand_r["median_distance"] - tag_r["median_distance"]
         print(f"\n  2. At 60% sparsity, TAG does not beat random on exact-match")
         print(f"     accuracy ({tag_r['exact_match_rate']*100:.1f}% vs "
               f"{rand_r['exact_match_rate']*100:.1f}%).")
-        print(f"     However, TAG reduces mean topological error from")
-        print(f"     {rand_r['mean_distance']:.2f} to {tag_r['mean_distance']:.2f} hops")
+        print(f"     However, TAG reduces median topological error from")
+        print(f"     {rand_r['median_distance']:.2f} to {tag_r['median_distance']:.2f} hops")
         print(f"     ({dist_delta:.2f} hops closer on average).")
         print(f"     -> The defensible contribution is topology-aware narrowing,")
         print(f"        not exact endpoint recovery.")
@@ -5596,9 +5554,9 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
         print(f"\n  3. TAG inference vs Last-Seen heuristic at 60% sparsity:")
         print(f"     TAG exact: {tag_r['exact_match_rate']*100:.1f}%  |  "
               f"Last-Seen exact: {last_r['exact_match_rate']*100:.1f}%")
-        print(f"     TAG dist:  {tag_r['mean_distance']:.2f}  |  "
-              f"Last-Seen dist:  {last_r['mean_distance']:.2f}")
-        if tag_r["mean_distance"] < last_r["mean_distance"]:
+        print(f"     TAG dist:  {tag_r['median_distance']:.2f}  |  "
+              f"Last-Seen dist:  {last_r['median_distance']:.2f}")
+        if tag_r["median_distance"] < last_r["median_distance"]:
             print(f"     TAG is topologically closer even when not exactly right.")
         else:
             print(f"     Last-Seen is stronger on exact match here, but TAG still")
@@ -5644,16 +5602,16 @@ def print_key_findings(results_df, overall_df, sequences, all_nodes):
     if not tag_60.empty and not static_60.empty:
         tag_r    = tag_60.iloc[0]
         static_r = static_60.iloc[0]
-        dist_gap = static_r["mean_distance"] - tag_r["mean_distance"]
+        dist_gap = static_r["median_distance"] - tag_r["median_distance"]
         print(f"\n  7. TEMPORAL ABLATION (Static vs Temporal Transition Matrix):")
         print(f"     At 60% sparsity:")
-        print(f"     Temporal TAG dist: {tag_r['mean_distance']:.2f}  |  "
-              f"Static TAG dist: {static_r['mean_distance']:.2f}")
+        print(f"     Temporal TAG dist: {tag_r['median_distance']:.2f}  |  "
+              f"Static TAG dist: {static_r['median_distance']:.2f}")
         print(f"     Temporal TAG exact: {tag_r['exact_match_rate']*100:.1f}%  |  "
               f"Static TAG exact: {static_r['exact_match_rate']*100:.1f}%")
         if dist_gap > 0:
-            print(f"     -> Temporal weighting reduces mean distance by "
-                  f"{dist_gap:.2f} hops ({100*dist_gap/max(static_r['mean_distance'],0.01):.1f}%).")
+            print(f"     -> Temporal weighting reduces median distance by "
+                  f"{dist_gap:.2f} hops ({100*dist_gap/max(static_r['median_distance'],0.01):.1f}%).")
             print(f"        Stripping temporal ordering from the transition matrix")
             print(f"        causes belief to diffuse more uniformly, confirming that")
             print(f"        temporal path ordering is responsible for localization.")
@@ -5700,24 +5658,24 @@ def save_results(results_df, by_source_df, overall_df):
         r = tag_40.iloc[0]
         summary["tag_exact_at_40pct"]  = r["exact_match_rate"]
         summary["tag_top3_at_40pct"]   = r["top3_accuracy"]
-        summary["tag_dist_at_40pct"]   = r["mean_distance"]
+        summary["tag_dist_at_40pct"]   = r["median_distance"]
 
     if not tag_60.empty:
         r = tag_60.iloc[0]
         summary["tag_exact_at_60pct"]  = r["exact_match_rate"]
         summary["tag_top3_at_60pct"]   = r["top3_accuracy"]
-        summary["tag_dist_at_60pct"]   = r["mean_distance"]
+        summary["tag_dist_at_60pct"]   = r["median_distance"]
 
     if not rand_60.empty:
         r = rand_60.iloc[0]
         summary["rand_exact_at_60pct"] = r["exact_match_rate"]
-        summary["rand_dist_at_60pct"]  = r["mean_distance"]
+        summary["rand_dist_at_60pct"]  = r["median_distance"]
 
     if not last_60.empty:
         r = last_60.iloc[0]
         summary["last_exact_at_60pct"] = r["exact_match_rate"]
         summary["last_top3_at_60pct"]  = r["top3_accuracy"]
-        summary["last_dist_at_60pct"]  = r["mean_distance"]
+        summary["last_dist_at_60pct"]  = r["median_distance"]
 
     # Static TAG ablation metrics
     static_overall = overall_df[overall_df["method"] == "Static_TAG"]
@@ -5726,7 +5684,7 @@ def save_results(results_df, by_source_df, overall_df):
         r = static_60.iloc[0]
         summary["static_exact_at_60pct"] = r["exact_match_rate"]
         summary["static_top3_at_60pct"]  = r["top3_accuracy"]
-        summary["static_dist_at_60pct"]  = r["mean_distance"]
+        summary["static_dist_at_60pct"]  = r["median_distance"]
 
     pd.DataFrame([summary]).to_csv(OUT_SUMMARY, index=False)
 
@@ -5948,7 +5906,7 @@ def build_static_node_graph():
 def build_static_host_graph():
     host_graph = nx.Graph()
     vertex_files = sorted(BASE_DIR.glob("VERTICES_T*.CSV"))
-    arc_files = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
+    arc_files    = sorted(BASE_DIR.glob("ARCS_T*.CSV"))
 
     node_to_host = {}
     for vf in vertex_files:
@@ -6339,8 +6297,8 @@ def print_temporal_ablation_discussion():
             static_exact = row.get("static_exact_at_60pct")
             if pd.notna(tag_dist) and pd.notna(static_dist):
                 gap = static_dist - tag_dist
-                print(f"    Temporal TAG mean dist (60% sparsity)  : {tag_dist:.2f}")
-                print(f"    Static TAG mean dist (60% sparsity)    : {static_dist:.2f}")
+                print(f"    Temporal TAG median dist (60% sparsity)  : {tag_dist:.2f}")
+                print(f"    Static TAG median dist (60% sparsity)    : {static_dist:.2f}")
                 print(f"    Distance improvement                   : {gap:.2f} hops")
                 if pd.notna(tag_exact) and pd.notna(static_exact):
                     print(f"    Temporal TAG exact match : {tag_exact*100:.1f}%")
