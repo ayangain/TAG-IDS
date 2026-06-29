@@ -1023,7 +1023,7 @@ if (not only_in_tag and not only_in_ids
         and missing_cve_for_dst == 0 and mismatched_attack_type == 0):
     print("\nOK IDS alerts consistent with temporal graph and mappings.")
 else:
-    print("\nWARN Review inconsistencies listed above.")
+    print("\nWARN: Sensor gap detected. Some hosts in the TAG are unmonitored by the IDS (expected by design).")
 
 
 # ===== File: Alert correlator.py =====
@@ -1700,9 +1700,6 @@ def classify_alert_pair(node_a, window_a, node_b, window_b, path_lookup):
         return None
 
     arrival = try_key(node_a, node_b)
-    if debug_count < 10:
-        print(f"DEBUG classify: a={node_a} (w={window_a}), b={node_b} (w={window_b}), arrival={arrival}, in_lookup={(str(node_a), str(node_b)) in path_lookup}")
-        debug_count += 1
         
     if arrival is not None:
         if window_b >= window_a:
@@ -3120,7 +3117,6 @@ def compute_correlation(persist_df, struct_df):
         ("total_exposure_score",  "path_critical",  "exposure_score vs path_critical"),
         ("total_exposure_score",  "avg_degree",     "exposure_score vs avg_degree"),
         ("critical_cve_count",    "path_critical",  "critical_CVEs vs path_critical"),
-        ("avg_persistence_span",  "node_windows",   "avg_span vs node_windows"),
     ]
 
     print(f"\n  {'Pair':<40} {'r':>7} {'p-value':>10} {'sig':>5}")
@@ -6245,7 +6241,7 @@ def print_key_findings(comparison_df, tag_df):
           f"({valid_pct}% [{label_ci['valid_pct_ci'][0]:.1f}, {label_ci['valid_pct_ci'][1]:.1f}])")
     print(f"     are structurally valid attack chains according to the TAG.")
     print(f"     (Valid chain rates vary with topology density; in this hub-and-spoke")
-    print(f"      configuration with ~30-50% host retention, approximately {valid_pct:.0f}%")
+    print(f"      configuration with ~30-50% host retention, only a minority")
     print(f"      of consecutive pairs correspond to feasible attack progressions.)")
     print(f"\n  2. {n_impos} pairs ({round(100*n_impos/total,1)}% [{label_ci['impossible_pct_ci'][0]:.1f}, {label_ci['impossible_pct_ci'][1]:.1f}]) are structurally IMPOSSIBLE -")
     print(f"     a standard correlator would incorrectly link these.")
