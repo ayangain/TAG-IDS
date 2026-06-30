@@ -6309,6 +6309,9 @@ def print_temporal_ablation_discussion():
                 else:
                     print(f"    -> Graph structure dominates over temporal ordering")
                     print(f"       at this topology scale.")
+                
+                print(f"    (Note: While median captures central tendency, ~25% of sources")
+                print(f"     experience complete localization failure, hitting the N-host ceiling.)")
             else:
                 print(f"    [static metrics not yet computed — rerun Idea 6]")
         else:

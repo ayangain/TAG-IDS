@@ -1,10 +1,7 @@
-0,"execCode(h1, root): CVE-2020-16892",AND,0
-1,"execCode(h2, root): CVE-2021-22557 CVE-2020-24614",AND,0
-4,"execCode(h5, root): CVE-2020-5410",AND,0
-5,"execCode(h6, root): CVE-2021-22569",AND,0
-13,"execCode(h14, root): CVE-2021-30132 CVE-2021-28156",AND,0
-14,"execCode(h15, root): CVE-2021-26855",AND,0
-15,"execCode(h16, root): CVE-2020-15505 CVE-2021-37582",AND,0
-16,"execCode(h17, root): CVE-2020-16899",AND,0
-17,"execCode(h18, root): CVE-2020-1236 CVE-2021-23215",AND,0
-18,"execCode(h19, root): CVE-2020-11738",AND,0
+2,"execCode(h3, root): CVE-2021-24498",AND,0
+3,"execCode(h4, root): CVE-2021-22570 CVE-2021-34482",AND,0
+6,"execCode(h7, root): CVE-2021-21233 CVE-2021-28169",AND,0
+7,"execCode(h8, root): CVE-2021-27065",AND,0
+10,"execCode(h11, root): CVE-2021-21233 CVE-2021-28850",AND,0
+12,"execCode(h13, root): CVE-2020-1234",AND,0
+13,"execCode(h14, root): CVE-2020-16898 CVE-2021-20294",AND,0
