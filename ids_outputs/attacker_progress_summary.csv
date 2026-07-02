@@ -1,2 +1,2 @@
 total_experiments,sparsity_rates,num_trials,tag_exact_at_40pct,tag_top3_at_40pct,tag_dist_at_40pct,tag_exact_at_60pct,tag_top3_at_60pct,tag_dist_at_60pct,rand_exact_at_60pct,rand_dist_at_60pct,last_exact_at_60pct,last_top3_at_60pct,last_dist_at_60pct,static_exact_at_60pct,static_top3_at_60pct,static_dist_at_60pct
-1300,"[0.0, 0.2, 0.4, 0.6, 0.8]",5,0.1949,0.6759,1.0,0.1801,0.6087,1.0,0.0194,2.0,0.403,0.0,1.0,0.1067,0.3133,1.0
+1000,"[0.0, 0.2, 0.4, 0.6, 0.8]",5,0.1047,0.3033,1.0,0.1302,0.316,1.0,0.0345,2.0,0.2821,0.0,1.0,0.12,0.2167,1.0

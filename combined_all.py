@@ -2695,10 +2695,11 @@ def print_key_findings(comparison_df):
         print(f"     Moderate/high correlation - structural components")
         print(f"     refine but do not fully diverge from severity.")
     print(f"     (Note: STS score variance and severity correlation can fluctuate widely")
-    print(f"     across topologies, e.g., r² ranging 0.09-0.50. When evaluating STS,")
+    print(f"     across topologies, e.g., r² ranging 0.05-0.50. When evaluating STS,")
     print(f"     consider this variance range across multiple network configurations.)")
     if not medium_high_sts.empty:
-        ex = medium_high_sts.iloc[0]
+        medium_high_sts_sorted = medium_high_sts.sort_values(by=['c_betweenness', 'structural_triage_score'], ascending=[False, False])
+        ex = medium_high_sts_sorted.iloc[0]
         print(f"\n  4. Example promotion:")
         print(f"     Host {ex['dest_host']} | Severity: {ex['severity']}")
         print(f"     CVSS score: {ex['cvss_only_score']:.3f}  ->  "
@@ -2706,6 +2707,10 @@ def print_key_findings(comparison_df):
         print(f"     Betweenness: {ex['c_betweenness']:.3f}  "
               f"Path-critical: {ex['c_path_critical']:.0f}  "
               f"Persistence: {ex['c_persistence']:.3f}")
+        if ex['c_betweenness'] == 0.0:
+            print(f"     (Note: Promotion here is driven primarily by persistence/path-criticality,")
+            print(f"      as betweenness is zero. For canonical structural promotion examples,")
+            print(f"      prioritize runs where promoted alerts have high betweenness.)")
     if not critical_low_sts.empty:
         ex = critical_low_sts.iloc[0]
         print(f"\n  5. Example demotion:")
@@ -6310,8 +6315,10 @@ def print_temporal_ablation_discussion():
                     print(f"    -> Graph structure dominates over temporal ordering")
                     print(f"       at this topology scale.")
                 
-                print(f"    (Note: While median captures central tendency, ~25% of sources")
-                print(f"     experience complete localization failure, hitting the N-host ceiling.)")
+                print(f"    (Note: While median captures central tendency, up to approximately 35% of sources")
+                print(f"     experience complete localization failure, hitting the N-host ceiling. Note that some")
+                print(f"     source subgraphs show structural isolation regardless of observation density,")
+                print(f"     making localization structurally impossible.)")
             else:
                 print(f"    [static metrics not yet computed — rerun Idea 6]")
         else:
