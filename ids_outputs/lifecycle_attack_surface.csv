@@ -1,5 +1,5 @@
 window,active_hosts,total_nodes,total_edges,hosts_unpublished,hosts_published_only,hosts_exploit_available,hosts_patched,full_graph_reach_pairs,full_graph_reachable_nodes,lifecycle_reach_pairs,lifecycle_reachable_nodes,surface_reduction_pairs,surface_reduction_pct,lifecycle_edges,edges_removed_by_lifecycle,exploitable_node_count,nodes_newly_unreachable
-T1,18,18,24,4,14,6,1,50,18,9,6,41,82.0,7,17,6,12
-T2,13,13,24,0,7,8,4,34,12,17,7,17,50.0,13,11,8,5
-T3,19,19,20,0,3,10,9,26,12,11,7,15,57.7,9,11,10,5
-T4,15,15,16,0,0,8,11,18,11,11,5,7,38.9,10,6,8,6
+T1,10,10,12,3,6,5,0,14,8,4,3,10,71.4,4,8,5,5
+T2,9,9,12,0,4,5,3,16,8,11,5,5,31.2,8,4,5,3
+T3,7,7,12,0,2,4,2,16,7,8,4,8,50.0,7,5,4,3
+T4,8,8,20,0,0,5,6,23,7,15,5,8,34.8,14,6,5,2

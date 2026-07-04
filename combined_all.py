@@ -6343,7 +6343,7 @@ def print_temporal_ablation_discussion():
                     print(f"    -> Graph structure dominates over temporal ordering")
                     print(f"       at this topology scale.")
                 
-                print(f"    (Note: While median captures central tendency, between 25% and 40% of sources depending on graph topology")
+                print(f"    (Note: While median captures central tendency, in some runs, up to 40% of sources")
                 print(f"     experience complete localization failure, hitting the N-host ceiling. Note that some")
                 print(f"     source subgraphs show structural isolation regardless of observation density,")
                 print(f"     making localization structurally impossible.)")
