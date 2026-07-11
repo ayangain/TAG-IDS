@@ -1,5 +1,4 @@
 host,total_cves,max_persistence_span,avg_persistence_span,max_streak,total_exposure_score,critical_cve_count,node_id,path_critical,node_windows,avg_degree,max_degree,risk_tier
-h10,2,3,3.0,2,4.5,0,9,1,3,3.667,7,HIGH_CHRONIC
-h19,2,3,3.0,3,3.75,0,18,1,3,1.333,2,HIGH_CHRONIC
-h3,1,4,4.0,4,2.0,0,2,1,4,5.75,8,HIGH_CHRONIC
-h13,1,3,3.0,3,1.5,0,12,1,3,2.333,3,HIGH_CHRONIC
+h7,2,4,4.0,4,6.0,0,6,1,4,3.5,5.0,HIGH_CHRONIC
+h18,2,3,3.0,3,5.25,1,17,1,3,2.333,5.0,CRITICAL_CHRONIC
+h2,1,3,3.0,3,3.0,1,1,1,3,5.667,9.0,CRITICAL_CHRONIC
