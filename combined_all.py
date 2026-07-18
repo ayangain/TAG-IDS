@@ -716,9 +716,11 @@ class IDSAlertSimulator:
         self.base_time      = base_time or datetime.datetime.now()
         self.alerts         = []
         self.host_cves_map  = host_cves_map or {}
+        self._campaign_counter = 0
 
     def generate_alert(self, timestamp, src_host, dst_host,
-                       attack_type, severity, cve_id=None, time_window=None):
+                       attack_type, severity, cve_id=None, time_window=None,
+                       campaign_id=None, is_attack_path=False):
         return {
             "timestamp"        : timestamp,
             "source_host"      : src_host,
@@ -732,9 +734,12 @@ class IDSAlertSimulator:
             "bytes_transferred": random.randint(100, 1000000),
             "cve_id"           : cve_id,
             "time_window"      : time_window,
+            "campaign_id"      : campaign_id,
+            "is_attack_path"   : is_attack_path,
         }
 
-    def simulate_alerts_for_path(self, time_window, path_nodes):
+    def simulate_alerts_for_path(self, time_window, path_nodes,
+                                 campaign_id=None, is_attack_path=False):
         if len(path_nodes) < 2:
             return
 
@@ -766,7 +771,8 @@ class IDSAlertSimulator:
 
             self.alerts.append(
                 self.generate_alert(current_time, src_host, dst_host,
-                                    attack_type, severity, cve_id, time_window=time_window)
+                                    attack_type, severity, cve_id, time_window=time_window,
+                                    campaign_id=campaign_id, is_attack_path=is_attack_path)
             )
             current_time += datetime.timedelta(minutes=random.randint(1, 5), seconds=random.randint(0, 59))
 
@@ -862,7 +868,12 @@ class IDSAlertSimulator:
                     if node in monitored:
                         visible_path.append(node)
                 if len(visible_path) > 1:
-                    self.simulate_alerts_for_path(window, visible_path)
+                    self._campaign_counter += 1
+                    self.simulate_alerts_for_path(
+                        window, visible_path,
+                        campaign_id=self._campaign_counter,
+                        is_attack_path=True,
+                    )
 
         # Phase 1: Guaranteed minimum campaigns per window
         for t in range(1, time_windows + 1):
@@ -891,7 +902,10 @@ class IDSAlertSimulator:
             if not dst_choices:
                 continue
             dst_host = random.choice(dst_choices)
-            self.simulate_alerts_for_path(window, [src_host, dst_host])
+            self.simulate_alerts_for_path(
+                window, [src_host, dst_host],
+                campaign_id=None, is_attack_path=False,
+            )
 
     def get_alerts_dataframe(self):
         return pd.DataFrame(self.alerts)
@@ -6114,7 +6128,7 @@ def tag_self_metrics(tag_df):
     ci = bootstrap_label_cis(tag_df)
 
     return {
-        "baseline"            : "TAG_IDS (ours)",
+        "baseline"            : "TAG_IDS (oracle/reference)",
         "total_pairs"         : total,
         "tag_valid"           : int(n_valid),
         "tag_impossible"      : int(n_impossible),
@@ -6143,7 +6157,9 @@ def tag_self_metrics(tag_df):
         "impossible_rate_ci_high_pct": ci["impossible_pct_ci"][1],
         "ambiguous_rate_ci_low_pct" : ci["ambiguous_pct_ci"][0],
         "ambiguous_rate_ci_high_pct" : ci["ambiguous_pct_ci"][1],
-        "note"                : f"Reference/oracle row only: TAG resolves {coverage}% of pairs; "
+        "note"                : f"Structural oracle — not a competing method. "
+                                f"FCR=0% and MCR=0% hold by construction (definitional guarantee). "
+                                f"TAG resolves {coverage}% of pairs; "
                                 f"{n_ambiguous} ambiguous ({round(100*n_ambiguous/total,1)}%).",
     }
 
@@ -6163,7 +6179,8 @@ def build_detail_table(tag_df, all_predictions):
 def print_comparison(comparison_df):
     print("\n" + "=" * 80)
     print("  BASELINE COMPARISON TABLE")
-    print("  (TAG VALID = ground truth positive; TAG IMPOSSIBLE = ground truth negative)")
+    print("  (Ground truth: TAG structural reachability oracle.")
+    print("   Baselines are scored against TAG classifications.)")
     print("=" * 80)
 
     print(f"\n  {'Baseline':<35} {'Corr':>6} {'FCR% [95% CI]':>18} {'MCR% [95% CI]':>18} "
@@ -6195,23 +6212,20 @@ def print_comparison(comparison_df):
 
 def print_reference_metrics(reference_row):
     print("\n" + "=" * 80)
-    print("  TAG-IDS REFERENCE")
+    print("  TAG-IDS STRUCTURAL ORACLE")
     print("=" * 80)
+    print(f"  Role                        : Structural oracle (defines ground truth)")
     print(f"  Reference row               : {reference_row['baseline']}")
     n_valid = reference_row['tag_valid']
     n_impos = reference_row['tag_impossible']
     n_ambig = reference_row['tag_ambiguous']
     print(f"  Valid / Impossible / Ambig   : {n_valid} / {n_impos} / {n_ambig}")
-    # Compute P/R/F1 on non-ambiguous pairs (TAG VALID=TP, TAG IMPOSSIBLE=TN)
-    # By construction TAG never misclassifies: P=1, R=1, F1=1 on this subset.
     non_ambig = n_valid + n_impos
-    if non_ambig > 0:
-        print(f"  Reference precision / recall : 1.000 [1.000, 1.000] / 1.000 [1.000, 1.000]")
-        print(f"  Reference F1                : 1.000 [1.000, 1.000]")
-        print(f"  (computed on {non_ambig} non-ambiguous pairs)")
-    else:
-        print("  Reference precision / recall : N/A (no non-ambiguous pairs)")
-        print("  Reference F1                : N/A")
+    print(f"  FCR = 0.0% by construction  : (definitional guarantee, not empirical)")
+    print(f"  MCR = 0.0% by construction  : (definitional guarantee, not empirical)")
+    print(f"  P/R/F1                      : Not reported — TAG defines the labels,")
+    print(f"                                so self-evaluation is circular by definition.")
+    print(f"  Resolved pairs              : {non_ambig} non-ambiguous out of {n_valid + n_impos + n_ambig} total")
     print(f"  Valid rate CI               : [{reference_row['valid_rate_ci_low_pct']:.1f}, {reference_row['valid_rate_ci_high_pct']:.1f}]")
     print(f"  Impossible rate CI          : [{reference_row['impossible_rate_ci_low_pct']:.1f}, {reference_row['impossible_rate_ci_high_pct']:.1f}]")
     print(f"  Ambiguous rate CI           : [{reference_row['ambiguous_rate_ci_low_pct']:.1f}, {reference_row['ambiguous_rate_ci_high_pct']:.1f}]")
@@ -6250,9 +6264,19 @@ def print_key_findings(comparison_df, tag_df):
     print(f"     FCR={best['false_corr_rate_pct']}% [{best.get('false_corr_rate_ci_low_pct', best['false_corr_rate_pct']):.1f}, {best.get('false_corr_rate_ci_high_pct', best['false_corr_rate_pct']):.1f}]"
           f"  MCR={best['missed_chain_rate_pct']}% [{best.get('missed_chain_rate_ci_low_pct', best['missed_chain_rate_pct']):.1f}, {best.get('missed_chain_rate_ci_high_pct', best['missed_chain_rate_pct']):.1f}]"
           f"  F1={best['f1_score']} [{best.get('f1_score_ci_low', best['f1_score']):.3f}, {best.get('f1_score_ci_high', best['f1_score']):.3f}]")
-    print(f"\n  5. TAG-IDS reduces false correlation rate to 0% by design,")
-    print(f"     while identifying the {n_ambig} ambiguous cases as a third")
+    print(f"\n  5. TAG-IDS achieves FCR=0% as a definitional guarantee of the temporal")
+    print(f"     reachability check — any pair classified VALID is structurally feasible")
+    print(f"     by construction. In this configuration, the lowest-FCR independent")
+    print(f"     baseline achieves {best['false_corr_rate_pct']:.1f}%.")
+    print(f"     (NOTE: This floor varies across network sizes and topologies.")
+    print(f"     For the paper, cite the cross-run aggregate range, not this")
+    print(f"     single-configuration number.)")
+    print(f"     TAG-IDS additionally identifies {n_ambig} ambiguous cases as a third")
     print(f"     class that no baseline can distinguish.")
+    print(f"\n  STATISTICAL NOTE: {total} consecutive pairs yield {n_valid+n_impos}")
+    print(f"  non-ambiguous samples. Several baseline CIs span 30+ percentage points,")
+    print(f"  reflecting the small sample size. Cross-run replication across 9 network")
+    print(f"  sizes (20-100 hosts) confirms directional consistency of these findings.")
     print("=" * 80)
 
 def main():
