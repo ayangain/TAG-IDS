@@ -54,6 +54,7 @@ try:
     tag_exacts = []        # TAG exact@60% per run
     tag_dists = []         # TAG median dist@60% per run
     static_dists = []      # static TAG dist@60% per run
+    sts_r2s = []           # STS explained variance r2 per run
     run_sizes = []
 
     for h in hosts:
@@ -91,6 +92,11 @@ try:
         if m:
             static_dists.append(float(m.group(1)))
 
+        # Extract STS explained variance r2
+        m = re.search(r"Explained Variance \(r²\):\s*([\d.]+)", text)
+        if m:
+            sts_r2s.append(float(m.group(1)))
+
     if lowest_fcrs:
         mean_fcr = sum(lowest_fcrs) / len(lowest_fcrs)
         print(f"\n  Lowest-FCR baseline across {len(lowest_fcrs)} runs:")
@@ -114,6 +120,14 @@ try:
         print(f"\n  Attacker Progress TAG exact@60% across {len(tag_exacts)} runs:")
         print(f"    Range : {min(tag_exacts)*100:.1f}% – {max(tag_exacts)*100:.1f}%")
         print(f"    Mean  : {mean_exact*100:.1f}%")
+
+    if sts_r2s:
+        mean_sts = sum(sts_r2s) / len(sts_r2s)
+        print(f"\n  STS Explained Variance (r²) across {len(sts_r2s)} runs:")
+        print(f"    Range : {min(sts_r2s)*100:.1f}% – {max(sts_r2s)*100:.1f}%")
+        print(f"    Mean  : {mean_sts*100:.1f}%")
+        print(f"    PAPER CLAIM: CVSS severity alone only explains ~{min(sts_r2s)*100:.0f}–{max(sts_r2s)*100:.0f}%")
+        print(f"    of the variance in true structural risk.")
 
     if tag_dists and static_dists and len(tag_dists) == len(static_dists):
         improvements = [s - t for s, t in zip(static_dists, tag_dists)]

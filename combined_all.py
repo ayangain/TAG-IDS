@@ -2138,6 +2138,7 @@ def _local_path_nodes(all_windows):
 
 MONITORED        = "MONITORED"
 PATH_CRITICAL    = "PATH_CRITICAL_BLIND_SPOT"
+NON_CRITICAL     = "NON_CRITICAL_BLIND_SPOT"
 
 def classify_nodes(registry, alerted, path_nodes, all_windows):
     print("\n[5/6] Classifying nodes per window...")
@@ -2151,8 +2152,10 @@ def classify_nodes(registry, alerted, path_nodes, all_windows):
 
             if is_alerted:
                 status = MONITORED
-            else:
+            elif is_on_path:
                 status = PATH_CRITICAL
+            else:
+                status = NON_CRITICAL
 
             node_records.append({
                 "window"         : w,
@@ -2169,7 +2172,8 @@ def classify_nodes(registry, alerted, path_nodes, all_windows):
         wdf = nodes_df[nodes_df["window"] == w]
         print(f"  {w}: total={len(wdf)}  "
               f"monitored={( wdf['status']==MONITORED).sum()}  "
-              f"blind_spots={(wdf['status']==PATH_CRITICAL).sum()}")
+              f"blind_spots={(wdf['status']!=MONITORED).sum()}  "
+              f"(path_critical={(wdf['status']==PATH_CRITICAL).sum()})")
 
     return nodes_df
 
@@ -2179,6 +2183,7 @@ def compute_window_summary(nodes_df, all_windows):
         wdf   = nodes_df[nodes_df["window"] == w]
         total = len(wdf)
         mon   = (wdf["status"] == MONITORED).sum()
+        total_blind = (wdf["status"] != MONITORED).sum()
         pc    = (wdf["status"] == PATH_CRITICAL).sum()
 
         rows.append({
@@ -2186,8 +2191,8 @@ def compute_window_summary(nodes_df, all_windows):
             "total_nodes"               : total,
             "monitored"                 : int(mon),
             "path_critical_blind_spots" : int(pc),
-            "total_blind_spots"         : int(pc),
-            "blind_spot_ratio_pct"      : round(100 * pc / total, 1) if total else 0,
+            "total_blind_spots"         : int(total_blind),
+            "blind_spot_ratio_pct"      : round(100 * total_blind / total, 1) if total else 0,
             "path_critical_ratio_pct"   : round(100 * pc / total, 1) if total else 0,
             "coverage_pct"              : round(100 * mon / total, 1) if total else 0,
         })
@@ -2243,13 +2248,14 @@ def print_report(window_summary, dynamic_df, nodes_df, all_windows):
     print("=" * 65)
 
     print(f"\n  {'Window':<8} {'Total':>6} {'Monitored':>10} "
-          f"{'Path-Critical':>14} {'BS Ratio%':>10} {'Coverage%':>10}")
-    print("  " + "-" * 63)
+          f"{'Total BS':>10} {'Path-Critical':>14} {'BS Ratio%':>10} {'Coverage%':>10}")
+    print("  " + "-" * 75)
     for _, row in window_summary.iterrows():
         print(
             f"  {row['window']:<8} "
             f"{row['total_nodes']:>6} "
             f"{row['monitored']:>10} "
+            f"{row['total_blind_spots']:>10} "
             f"{row['path_critical_blind_spots']:>14} "
             f"{row['blind_spot_ratio_pct']:>9.1f}% "
             f"{row['coverage_pct']:>9.1f}%"
@@ -2274,6 +2280,8 @@ def print_key_findings(window_summary, dynamic_df, nodes_df, dynamic_trans):
     max_w    = window_summary.loc[window_summary["blind_spot_ratio_pct"].idxmax(), "window"]
     avg_cov  = window_summary["coverage_pct"].mean()
     total_pc = (nodes_df["status"] == PATH_CRITICAL).sum()
+    total_node_windows = len(nodes_df)
+    total_blind = (nodes_df["status"] != MONITORED).sum()
 
     print("\n" + "=" * 65)
     print("  KEY FINDINGS FOR PAPER")
@@ -2281,8 +2289,12 @@ def print_key_findings(window_summary, dynamic_df, nodes_df, dynamic_trans):
     print(f"\n  1. Average blind spot ratio across windows : {avg_bs:.1f}%")
     print(f"     Peak blind spot ratio                  : {max_bs:.1f}% ({max_w})")
     print(f"     Average IDS coverage                   : {avg_cov:.1f}%")
-    print(f"\n  2. Path-critical blind spots (on attack paths): {total_pc}")
-    print(f"     These are invisible to IDS but exploitable")
+    print(f"\n  2. Total blind spots: {total_blind} ({round(100*total_blind/total_node_windows,1)}% of total nodes)")
+    if total_blind > 0:
+        print(f"     Path-critical blind spots (on valid paths): {total_pc} ({round(100*total_pc/total_blind,1)}% of blind spots)")
+    else:
+        print(f"     Path-critical blind spots (on valid paths): {total_pc}")
+    print(f"     These are invisible to IDS but structurally critical for attack progression.")
     
     print(f"\n  3. Dynamic Blind Spot Transitions:")
     print(f"     EMERGED: {dynamic_trans.get('EMERGED', 0)}, RESOLVED: {dynamic_trans.get('RESOLVED', 0)}, PERSISTED: {dynamic_trans.get('PERSISTED', 0)}")
@@ -6239,10 +6251,13 @@ def print_key_findings(comparison_df, tag_df):
     n_ambig    = (tag_df["classification"] == AMBIGUOUS).sum()
     label_ci   = bootstrap_label_cis(tag_df)
 
-    non_tag = comparison_df[~comparison_df["baseline"].str.contains("TAG")]
-    non_tag_valid = non_tag[non_tag["missed_chain_rate_pct"] < 100]
+    non_tag = comparison_df[~comparison_df["baseline"].astype(str).str.contains("TAG")]
+    non_tag_valid = non_tag[(non_tag["missed_chain_rate_pct"] < 100) & (non_tag["correlated_predicted"] >= 10)]
+    
     if not non_tag_valid.empty:
         best = non_tag_valid.loc[non_tag_valid["false_corr_rate_pct"].idxmin()]
+    elif not non_tag[(non_tag["missed_chain_rate_pct"] < 100)].empty:
+        best = non_tag[(non_tag["missed_chain_rate_pct"] < 100)].loc[non_tag[(non_tag["missed_chain_rate_pct"] < 100)]["false_corr_rate_pct"].idxmin()]
     else:
         best = non_tag.loc[non_tag["f1_score"].idxmax()]
 
@@ -6261,13 +6276,13 @@ def print_key_findings(comparison_df, tag_df):
     print(f"\n  3. {n_ambig} pairs ({round(100*n_ambig/total,1)}% [{label_ci['ambiguous_pct_ci'][0]:.1f}, {label_ci['ambiguous_pct_ci'][1]:.1f}]) are ambiguous (path exists")
     print(f"     but temporal ordering violated - potential detection lag).")
     print(f"\n  4. Lowest-FCR baseline: {best['baseline']}")
-    print(f"     FCR={best['false_corr_rate_pct']}% [{best.get('false_corr_rate_ci_low_pct', best['false_corr_rate_pct']):.1f}, {best.get('false_corr_rate_ci_high_pct', best['false_corr_rate_pct']):.1f}]"
-          f"  MCR={best['missed_chain_rate_pct']}% [{best.get('missed_chain_rate_ci_low_pct', best['missed_chain_rate_pct']):.1f}, {best.get('missed_chain_rate_ci_high_pct', best['missed_chain_rate_pct']):.1f}]"
-          f"  F1={best['f1_score']} [{best.get('f1_score_ci_low', best['f1_score']):.3f}, {best.get('f1_score_ci_high', best['f1_score']):.3f}]")
+    print(f"     FCR=~{best['false_corr_rate_pct']:.0f}% [{best.get('false_corr_rate_ci_low_pct', best['false_corr_rate_pct']):.0f}, {best.get('false_corr_rate_ci_high_pct', best['false_corr_rate_pct']):.0f}]"
+          f"  MCR=~{best['missed_chain_rate_pct']:.0f}% [{best.get('missed_chain_rate_ci_low_pct', best['missed_chain_rate_pct']):.0f}, {best.get('missed_chain_rate_ci_high_pct', best['missed_chain_rate_pct']):.0f}]"
+          f"  F1={best['f1_score']:.3f} [{best.get('f1_score_ci_low', best['f1_score']):.3f}, {best.get('f1_score_ci_high', best['f1_score']):.3f}]")
     print(f"\n  5. TAG-IDS achieves FCR=0% as a definitional guarantee of the temporal")
     print(f"     reachability check — any pair classified VALID is structurally feasible")
     print(f"     by construction. In this configuration, the lowest-FCR independent")
-    print(f"     baseline achieves {best['false_corr_rate_pct']:.1f}%.")
+    print(f"     baseline achieves ~{best['false_corr_rate_pct']:.0f}%.")
     print(f"     (NOTE: This floor varies across network sizes and topologies.")
     print(f"     For the paper, cite the cross-run aggregate range, not this")
     print(f"     single-configuration number.)")
@@ -6531,9 +6546,11 @@ def print_consolidated_summary():
         if not df.empty:
             non_tag = df[~df["baseline"].astype(str).str.contains("TAG")]
             if not non_tag.empty:
-                non_tag_valid = non_tag[non_tag["missed_chain_rate_pct"] < 100]
+                non_tag_valid = non_tag[(non_tag["missed_chain_rate_pct"] < 100) & (non_tag["correlated_predicted"] >= 10)]
                 if not non_tag_valid.empty:
                     best = non_tag_valid.loc[non_tag_valid["false_corr_rate_pct"].idxmin()]
+                elif not non_tag[(non_tag["missed_chain_rate_pct"] < 100)].empty:
+                    best = non_tag[(non_tag["missed_chain_rate_pct"] < 100)].loc[non_tag[(non_tag["missed_chain_rate_pct"] < 100)]["false_corr_rate_pct"].idxmin()]
                 else:
                     best = non_tag.loc[non_tag["f1_score"].idxmax()]
                 summary_lines.append(
