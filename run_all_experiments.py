@@ -3,7 +3,7 @@ import time
 import os
 import glob
 
-hosts = [100, 90, 80, 70, 60, 50, 40, 30, 20]
+hosts = [40, 30, 20]  # Conference paper scope: 3 configurations
 windows = 4
 
 print(f"Starting batch run for {len(hosts)} experiments: {hosts} hosts, {windows} windows each.")
