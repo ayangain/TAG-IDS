@@ -106,7 +106,7 @@ Attack graphs have subsequently been employed in numerous security applications,
 
 Despite these advantages, conventional attack graphs share an important assumption: they are generated from a single snapshot of the network and are treated as valid throughout the analysis period. Consequently, host availability, network connectivity, vulnerability states, and access privileges are implicitly assumed to remain unchanged after graph construction. While this assumption is often acceptable for offline risk assessment, it becomes increasingly unrealistic in modern enterprise environments where virtual machines are dynamically instantiated, cloud services migrate, vulnerabilities are patched, and network policies evolve continuously. Under such conditions, an attack path that exists at one point in time may disappear shortly afterwards, while entirely new attack paths may emerge as the network evolves.
 
-This limitation has motivated two complementary research directions. The first incorporates attack graphs into intrusion detection systems to improve alert correlation and attack prediction using structural information derived from the graph. The second extends attack graphs themselves by explicitly modeling temporal changes in the attack surface. The former is reviewed in the following subsection, while the latter is discussed in Section~\ref{sec:related-work}
+This limitation has motivated two complementary research directions. The first incorporates attack graphs into intrusion detection systems to improve alert correlation and attack prediction using structural information derived from the graph. The second extends attack graphs themselves by explicitly modeling temporal changes in the attack surface. The former is reviewed in the following subsection, while the latter is discussed in the subsequent subsection.
 
 \subsection{Attack Graph-Based Intrusion Detection}
 
@@ -182,6 +182,28 @@ This paper addresses this gap through \textbf{TAG-IDS}, a context-aware intrusio
     \item \textbf{Temporal Blind Spot Quantification (TBSQ)}, which identifies hosts and attack paths that remain insufficiently monitored as the attack surface evolves, enabling analysts to improve monitoring coverage proactively.
 \end{enumerate}
 
+Table~\ref{tab:gap-comparison} summarizes how TAG-IDS differentiates itself from existing research domains by uniquely combining temporal attack surface evolution with operational IDS validation.
+
+\begin{table}[ht!]
+\centering
+\caption{Qualitative comparison of TAG-IDS against existing research domains.}
+\label{tab:gap-comparison}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{} l *{5}{>{\centering\arraybackslash}X} @{}}
+\toprule
+\textbf{Framework Category} & \textbf{Graph} & \textbf{Evolving} & \textbf{Alert} & \textbf{Alert} & \textbf{Coverage} \\
+ & \textbf{Reasoning} & \textbf{Network} & \textbf{Validation} & \textbf{Triage} & \textbf{Gaps} \\
+\midrule
+SIEM Heuristics \cite{1366134,s22041494} & No & No & No & No (CVSS) & No \\
+Static AG-IDS \cite{Roschke2010,Angelini2019} & Yes & No & Yes (Static) & Partial (Static) & No \\
+Temporal AGs \cite{ENOCH2019102448,Gain2023} & Yes & Yes & No (No IDS) & No & No \\
+GNN-based IDS \cite{Friji2023,Sun2024} & Yes & Partial & No (Stat.) & No & No \\
+\midrule
+\textbf{TAG-IDS (Proposed)} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes (Dyn.)} & \textbf{Yes (Dyn.)} & \textbf{Yes (Dyn.)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 By integrating temporal attack graph reasoning directly into operational IDS workflows, TAG-IDS extends Temporal Attack Graphs from descriptive security models into actionable decision-support mechanisms for alert validation, prioritization, and security monitoring. This capability complements existing IDS technologies while addressing an aspect of intrusion analysis that remains largely unexplored in the current literature.
 
 \section{Proposed TAG-IDS Framework}
@@ -213,7 +235,7 @@ Conventional IDS correlation mechanisms assume that alerts generated within a sh
 
 \paragraph{Problem definition.} Let $A = \{a_1, \ldots, a_n\}$ be the ordered set of IDS alerts generated during the monitoring period, where each alert $a_i = (t_i, s_i, d_i, \tau_i, \sigma_i)$ records a timestamp $t_i$, source host $s_i$, destination host $d_i$, attack category $\tau_i$, and severity $\sigma_i$. For a candidate pair $(a_i, a_j)$, TACV determines whether an attacker could feasibly traverse the evolving attack surface from $d_i$ to $s_j$ through a valid attack path in the TAG — rather than relying on the proxy test $|t_j - t_i| < \Delta$ used by conventional correlators.
 
-\paragraph{Candidate pair generation.} To bound computational cost, TACV first restricts attention to pairs within a configurable temporal threshold: $P = \{(a_i, a_j) \mid 0 < t_j - t_i \le \Delta\}$. This threshold reduces the candidate set for efficiency only; it does not itself determine correlation, which is decided entirely by the structural validation step below.
+\paragraph{Candidate pair generation.} To bound computational cost, TACV (Figure \ref{fig:tag-example}) first restricts attention to pairs within a configurable temporal threshold: $P = \{(a_i, a_j) \mid 0 < t_j - t_i \le \Delta\}$. This threshold reduces the candidate set for efficiency only; it does not itself determine correlation, which is decided entirely by the structural validation step below.
 
 \paragraph{Temporal structural validation.} For a candidate pair $(a_i, a_j)$ with $t_i \in w_p$ and $t_j \in w_q$, TACV identifies the corresponding attack graphs $G_p^a$ and $G_q^a$. If $p = q$, validation proceeds directly within $G_p^a$; otherwise TACV evaluates path existence across the sequence of intermediate windows $G_p^a, G_{p+1}^a, \ldots, G_q^a$. The pair is structurally feasible if there exists a path $\pi = (v_1, \ldots, v_k)$ originating at $d_i$, terminating at $s_j$, and remaining temporally valid throughout the intermediate windows, i.e., $\pi \subseteq \bigcup_{r=p}^{q} G_r^a$. Path existence is determined via graph traversal (Neo4j in our implementation).
 
@@ -287,7 +309,7 @@ We simulate a tiered enterprise network topology across four discrete time windo
 
 \subsection{Threat Model}
 
-We assume a remote network attacker who gains initial access to a single host and progresses laterally by exploiting known vulnerabilities (CVEs) along reachable network paths. The attacker is assumed to operate within the connectivity and privilege constraints modeled by the TAG: lateral movement requires a temporally valid exploit path between the source and destination hosts during the observation window in which movement occurs. We do not model zero-day exploits, insider threats with pre-existing credentials, or out-of-band channels (e.g., physical access, social engineering). Consequently, TAG-IDS's structural validation is sound with respect to the modeled attack surface but does not cover attack vectors that bypass the network topology entirely. This assumption directly relates to the TAG completeness caveat discussed in section \ref{sec:limitations}, if the infrastructure telemetry feeding the TAG is incomplete, attack paths outside the model could be silently missed.
+We assume a remote network attacker who gains initial access to a single host and progresses laterally by exploiting known vulnerabilities (CVEs) along reachable network paths. The attacker is assumed to operate within the connectivity and privilege constraints modeled by the TAG: lateral movement requires a temporally valid exploit path between the source and destination hosts during the observation window in which movement occurs. We do not model zero-day exploits, insider threats with pre-existing credentials, or out-of-band channels (e.g., physical access, social engineering). Consequently, TAG-IDS's structural validation is sound with respect to the modeled attack surface but does not cover attack vectors that bypass the network topology entirely. This assumption directly relates to the TAG completeness caveat discussed in \S\ref{sec:limitations}, if the infrastructure telemetry feeding the TAG is incomplete, attack paths outside the model could be silently missed.
 
 \subsection{Baselines}
 
@@ -308,9 +330,7 @@ For each configuration, we regress the CVSS-only severity score against STS and 
 
 \subsection{Promotion and Demotion of Alerts}
 
-We report the practical consequence of this gap by ranking alerts under both scoring schemes and measuring rank divergence. Across configurations, approximately 20--28\% of alerts are \emph{promoted} (ranked meaningfully higher by STS than by CVSS alone) and approximately 57--68\% are \emph{demoted} (ranked meaningfully lower). This asymmetry reflects the structural nature of enterprise risk. Severity scores are broadly distributed across all alerts, whereas structural importance is concentrated on a small set of chokepoint nodes. Consequently, most alerts, including many HIGH- and CRITICAL-severity events located on structurally peripheral hosts, are demoted relative to their nominal severity. Conversely, a smaller set of LOW- and MEDIUM-severity alerts on structurally central or persistent nodes are promoted above their nominal severity.
-
-Table \ref{tab:sts-example} shows a representative promotion/demotion pair from a single configuration, illustrating the mechanism: a MEDIUM-severity alert on a high-betweenness, path-critical, persistently exposed host is promoted well above several CRITICAL-severity alerts on structurally isolated hosts.
+We report the practical consequence of this gap by ranking alerts under both scoring schemes and measuring rank divergence. Across configurations, approximately 20--28\% of alerts are \emph{promoted} (ranked meaningfully higher by STS than by CVSS alone) and approximately 57--68\% are \emph{demoted} (ranked meaningfully lower). This asymmetry reflects the structural nature of enterprise risk. Severity scores are broadly distributed across all alerts, whereas structural importance is concentrated on a small set of chokepoint nodes. Consequently, most alerts, including many HIGH- and CRITICAL-severity events located on structurally peripheral hosts, are demoted relative to their nominal severity. Conversely, a smaller set of LOW- and MEDIUM-severity alerts on structurally central or persistent nodes are promoted above their nominal severity. Table~\ref{tab:sts-example} shows a representative promotion/demotion pair from a single configuration, illustrating the mechanism: a MEDIUM-severity alert on a high-betweenness, path-critical, persistently exposed host is promoted well above several CRITICAL-severity alerts on structurally isolated hosts. Figure~\ref{fig:sts-scatter} further illustrates this rank divergence across a broader alert sample.
 
 \begin{table}[t]
 \centering
@@ -337,7 +357,7 @@ Demoted alert & CRITICAL & 1 & 61 \\
 
 Taken together, these results support the motivating claim of Section \ref{sec:related-work}: severity-only triage systematically misallocates analyst attention in both directions. It over-prioritizes CRITICAL- and HIGH-severity alerts on structurally dead-end hosts that an attacker has little incentive or ability to leverage further, and it under-prioritizes MEDIUM- and even LOW-severity alerts that sit on chokepoints connecting multiple attack stages. Because STS is computed directly from the same Temporal Attack Graph used by TACV, promoted and demoted rankings update automatically as the network evolves across observation windows, without requiring the severity database or scoring policy itself to change.
 
-We note one limitation of the present evaluation: the $r^2$ range (3.0--3.7\%) is computed on our simulated topologies and alert distributions. Although the specific magnitude of severity's explanatory power may vary in networks with different connectivity patterns or vulnerability distributions, the qualitative finding that severity and structural risk represent largely independent signals is expected to generalize, as discussed further in Section \ref{sec:limitations}.
+We note one limitation of the present evaluation: the $r^2$ range (3.0--3.7\%) is computed on our simulated topologies and alert distributions. Although the specific magnitude of severity's explanatory power may vary in networks with different connectivity patterns or vulnerability distributions, the qualitative finding that severity and structural risk represent largely independent signals is expected to generalize, as discussed further in \S\ref{sec:limitations}.
 
 \section{Temporal Blind Spots: Empirical Results}
 \label{sec:tbsq-results}
@@ -346,7 +366,7 @@ We evaluate Temporal Blind Spot Quantification to answer a question static cover
 
 \subsection{Monitoring Coverage Is Incomplete and Shifts Across Windows}
 
-Across our three core configurations (20, 30, and 40~hosts), average IDS coverage (the fraction of TAG nodes with at least one mapped alert in a given window) ranged from approximately 50\% to 64\%, with blind-spot ratios correspondingly ranging from roughly 36\% to 50\% depending on configuration. Within a single run, coverage is not static. Per-window blind-spot ratios varied by as much as 30 percentage points across the four observation windows of a given configuration (for example, one representative run showed $BSR_t$ ranging from 33\% in an early window to 67\% in a later window as hosts joined and left the network). This confirms the motivating premise of Section \ref{sec:related-work}: a coverage assessment performed against a single network snapshot does not describe monitoring effectiveness across the observation period. The Temporal Blind Spot Index ($TBSI$) summarizes this shifting coverage into a single per-configuration metric because no individual window's coverage is representative of the whole.
+Across our three core configurations (20, 30, and 40~hosts), average IDS coverage (the fraction of TAG nodes with at least one mapped alert in a given window) ranged from approximately 50\% to 64\%, with blind-spot ratios correspondingly ranging from roughly 36\% to 50\% depending on configuration. Within a single run, coverage is not static (Figure \ref{fig:bsr-trend}). Per-window blind-spot ratios varied by as much as 30 percentage points across the four observation windows of a given configuration (for example, one representative run showed $BSR_t$ ranging from 33\% in an early window to 67\% in a later window as hosts joined and left the network). This confirms the motivating premise of Section \ref{sec:related-work}: a coverage assessment performed against a single network snapshot does not describe monitoring effectiveness across the observation period. The Temporal Blind Spot Index ($TBSI$) summarizes this shifting coverage into a single per-configuration metric because no individual window's coverage is representative of the whole.
 
 \begin{figure}[ht!]
 \centering
@@ -357,7 +377,7 @@ Across our three core configurations (20, 30, and 40~hosts), average IDS coverag
 
 \subsection{Path-Critical Blind Spots: A Caveat on Our Evaluation Topology}
 
-TBSQ distinguishes total blind spots from \emph{path-critical} blind spots, which are unmonitored nodes situated on a TACV-validated attack path, representing the operationally significant subset of coverage gaps. In our evaluation, path-critical blind spots coincided with the full blind-spot set in every configuration tested (100\% overlap). This outcome stems from the topological pruning applied prior to simulation, which removes isolated nodes and retains densely interconnected hosts. In such a densely pruned topology, an unmonitored node is highly likely to lie on a feasible attack path. We report this result as observed, but highlight it as a property of our evaluation topology rather than a universal claim. In less aggressively pruned or more sparsely connected real-world networks, $PC(v)$ is expected to discriminate between path-critical and peripheral blind spots, causing the two quantities to diverge, as discussed further in Section \ref{sec:limitations}.
+TBSQ distinguishes total blind spots from \emph{path-critical} blind spots, which are unmonitored nodes situated on a TACV-validated attack path, representing the operationally significant subset of coverage gaps. In our evaluation, path-critical blind spots coincided with the full blind-spot set in every configuration tested (100\% overlap). This outcome stems from the topological pruning applied prior to simulation, which removes isolated nodes and retains densely interconnected hosts. In such a densely pruned topology, an unmonitored node is highly likely to lie on a feasible attack path. We report this result as observed, but highlight it as a property of our evaluation topology rather than a universal claim. In less aggressively pruned or more sparsely connected real-world networks, $PC(v)$ is expected to discriminate between path-critical and peripheral blind spots, causing the two quantities to diverge, as discussed further in \S\ref{sec:limitations}.
 
 \subsection{Coverage Gaps Do Not Track Sensor Count}
 
@@ -406,7 +426,7 @@ The valid-chain rate varied substantially across configurations, from 11.6\% ($n
 
 \subsection{Baseline Comparison}
 
-We compare TAG-IDS against standard heuristic correlators: time-proximity windows (15, 30, 60, and 120~minutes) and CVSS severity thresholds (LOW, MEDIUM, HIGH, CRITICAL). The primary metric is the False Correlation Rate (FCR): the percentage of pairs that a baseline incorrectly links, which the TAG proves are structurally impossible.
+We compare TAG-IDS against standard heuristic correlators: time-proximity windows (15, 30, 60, and 120 minutes) and CVSS severity thresholds (LOW, MEDIUM, HIGH, CRITICAL). The primary metric is the False Correlation Rate (FCR): the percentage of pairs that a baseline incorrectly links, which the TAG proves are structurally impossible. These baseline comparisons are visualized in Figure \ref{fig:fcr-bar} and summarized in Table \ref{tab:fcr}.
 
 \begin{table}[t]
 \centering
