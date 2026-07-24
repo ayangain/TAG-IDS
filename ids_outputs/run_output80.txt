@@ -1,82 +1,82 @@
 OK Configuration: 80 total hosts across 4 time windows
-OK Active hosts per window: [26, 40, 35, 30]
-  T1→T2 overlap: 13/26 (50%)
-  T2→T3 overlap: 17/40 (42%)
-  T3→T4 overlap: 16/35 (46%)
+OK Active hosts per window: [37, 26, 31, 33]
+  T1→T2 overlap: 11/37 (30%)
+  T2→T3 overlap: 8/26 (31%)
+  T3→T4 overlap: 19/31 (61%)
 OK Unique hosts scheduled across all windows: 80
 
-TIME WINDOW T1: ['h10', 'h15', 'h17', 'h18', 'h19', 'h20', 'h22', 'h31', 'h32', 'h33', 'h34', 'h36', 'h38', 'h40', 'h42', 'h46', 'h49', 'h51', 'h55', 'h58', 'h60', 'h61', 'h64', 'h68', 'h77', 'h79']
-  Turned on/returned: ['h10', 'h15', 'h17', 'h18', 'h19', 'h20', 'h22', 'h31', 'h32', 'h33', 'h34', 'h36', 'h38', 'h40', 'h42', 'h46', 'h49', 'h51', 'h55', 'h58', 'h60', 'h61', 'h64', 'h68', 'h77', 'h79']
+TIME WINDOW T1: ['h10', 'h12', 'h13', 'h14', 'h15', 'h16', 'h21', 'h22', 'h27', 'h31', 'h33', 'h35', 'h36', 'h37', 'h41', 'h42', 'h44', 'h45', 'h46', 'h47', 'h49', 'h5', 'h50', 'h51', 'h53', 'h56', 'h59', 'h63', 'h64', 'h65', 'h66', 'h67', 'h68', 'h69', 'h70', 'h73', 'h79']
+  Turned on/returned: ['h10', 'h12', 'h13', 'h14', 'h15', 'h16', 'h21', 'h22', 'h27', 'h31', 'h33', 'h35', 'h36', 'h37', 'h41', 'h42', 'h44', 'h45', 'h46', 'h47', 'h49', 'h5', 'h50', 'h51', 'h53', 'h56', 'h59', 'h63', 'h64', 'h65', 'h66', 'h67', 'h68', 'h69', 'h70', 'h73', 'h79']
+  Generated 37 host(s) with CVEs
+TIME WINDOW T2: ['h10', 'h2', 'h20', 'h21', 'h24', 'h30', 'h32', 'h34', 'h37', 'h4', 'h43', 'h47', 'h48', 'h5', 'h50', 'h51', 'h52', 'h54', 'h56', 'h58', 'h66', 'h67', 'h70', 'h71', 'h76', 'h77']
+  Turned on/returned: ['h2', 'h20', 'h24', 'h30', 'h32', 'h34', 'h4', 'h43', 'h48', 'h52', 'h54', 'h58', 'h71', 'h76', 'h77']
+  Turned off: ['h12', 'h13', 'h14', 'h15', 'h16', 'h22', 'h27', 'h31', 'h33', 'h35', 'h36', 'h41', 'h42', 'h44', 'h45', 'h46', 'h49', 'h53', 'h59', 'h63', 'h64', 'h65', 'h68', 'h69', 'h73', 'h79']
   Generated 26 host(s) with CVEs
-TIME WINDOW T2: ['h10', 'h11', 'h13', 'h14', 'h16', 'h17', 'h19', 'h27', 'h28', 'h3', 'h30', 'h31', 'h32', 'h34', 'h36', 'h38', 'h39', 'h4', 'h43', 'h44', 'h45', 'h47', 'h49', 'h51', 'h54', 'h55', 'h6', 'h62', 'h63', 'h64', 'h66', 'h67', 'h69', 'h7', 'h71', 'h74', 'h75', 'h78', 'h79', 'h8']
-  Turned on/returned: ['h11', 'h13', 'h14', 'h16', 'h27', 'h28', 'h3', 'h30', 'h39', 'h4', 'h43', 'h44', 'h45', 'h47', 'h54', 'h6', 'h62', 'h63', 'h66', 'h67', 'h69', 'h7', 'h71', 'h74', 'h75', 'h78', 'h8']
-  Turned off: ['h15', 'h18', 'h20', 'h22', 'h33', 'h40', 'h42', 'h46', 'h58', 'h60', 'h61', 'h68', 'h77']
-  Generated 40 host(s) with CVEs
-TIME WINDOW T3: ['h1', 'h11', 'h13', 'h14', 'h17', 'h21', 'h24', 'h25', 'h28', 'h32', 'h34', 'h35', 'h4', 'h41', 'h43', 'h44', 'h48', 'h49', 'h5', 'h50', 'h52', 'h53', 'h56', 'h59', 'h6', 'h65', 'h67', 'h69', 'h7', 'h71', 'h72', 'h73', 'h74', 'h76', 'h9']
-  Turned on/returned: ['h1', 'h21', 'h24', 'h25', 'h35', 'h41', 'h48', 'h5', 'h50', 'h52', 'h53', 'h56', 'h59', 'h65', 'h72', 'h73', 'h76', 'h9']
-  Turned off: ['h10', 'h16', 'h19', 'h27', 'h3', 'h30', 'h31', 'h36', 'h38', 'h39', 'h45', 'h47', 'h51', 'h54', 'h55', 'h62', 'h63', 'h64', 'h66', 'h75', 'h78', 'h79', 'h8']
-  Generated 35 host(s) with CVEs
-TIME WINDOW T4: ['h12', 'h13', 'h18', 'h2', 'h23', 'h24', 'h26', 'h29', 'h32', 'h35', 'h37', 'h38', 'h4', 'h41', 'h50', 'h52', 'h53', 'h56', 'h57', 'h59', 'h62', 'h63', 'h64', 'h7', 'h70', 'h71', 'h73', 'h74', 'h76', 'h80']
-  Turned on/returned: ['h12', 'h18', 'h2', 'h23', 'h26', 'h29', 'h37', 'h38', 'h57', 'h62', 'h63', 'h64', 'h70', 'h80']
-  Turned off: ['h1', 'h11', 'h14', 'h17', 'h21', 'h25', 'h28', 'h34', 'h43', 'h44', 'h48', 'h49', 'h5', 'h6', 'h65', 'h67', 'h69', 'h72', 'h9']
-  Generated 30 host(s) with CVEs
+TIME WINDOW T3: ['h1', 'h11', 'h17', 'h18', 'h19', 'h20', 'h21', 'h23', 'h26', 'h28', 'h29', 'h3', 'h39', 'h4', 'h40', 'h47', 'h48', 'h55', 'h57', 'h58', 'h6', 'h60', 'h61', 'h62', 'h7', 'h70', 'h72', 'h74', 'h76', 'h80', 'h9']
+  Turned on/returned: ['h1', 'h11', 'h17', 'h18', 'h19', 'h23', 'h26', 'h28', 'h29', 'h3', 'h39', 'h40', 'h55', 'h57', 'h6', 'h60', 'h61', 'h62', 'h7', 'h72', 'h74', 'h80', 'h9']
+  Turned off: ['h10', 'h2', 'h24', 'h30', 'h32', 'h34', 'h37', 'h43', 'h5', 'h50', 'h51', 'h52', 'h54', 'h56', 'h66', 'h67', 'h71', 'h77']
+  Generated 31 host(s) with CVEs
+TIME WINDOW T4: ['h10', 'h11', 'h12', 'h16', 'h17', 'h2', 'h20', 'h21', 'h23', 'h25', 'h26', 'h28', 'h3', 'h32', 'h38', 'h40', 'h45', 'h48', 'h5', 'h53', 'h55', 'h6', 'h61', 'h62', 'h7', 'h72', 'h73', 'h74', 'h75', 'h76', 'h78', 'h8', 'h9']
+  Turned on/returned: ['h10', 'h12', 'h16', 'h2', 'h25', 'h32', 'h38', 'h45', 'h5', 'h53', 'h73', 'h75', 'h78', 'h8']
+  Turned off: ['h1', 'h18', 'h19', 'h29', 'h39', 'h4', 'h47', 'h57', 'h58', 'h60', 'h70', 'h80']
+  Generated 33 host(s) with CVEs
 
 OK COMPLETE: 4 time windows, 80 hosts, 80 with CVEs
 OK Generated 8 CSV files
 OK Loaded CVE mapping for 80 hosts
 
 --- IDS Alert Simulation Summary ---
-Total Alerts: 128
+Total Alerts: 127
 
 Alerts by Severity:
 severity
-HIGH        53
-CRITICAL    38
-MEDIUM      33
-LOW          4
+HIGH        65
+MEDIUM      35
+CRITICAL    17
+LOW         10
 Name: count, dtype: int64
 
 Top Attack Types:
 attack_type
-WebLogic RCE                  8
-Redis Auth Bypass             8
-OpenSSL Int Overflow          7
-PostgreSQL Auth Bypass        6
-Struts File Upload            6
-Apache Crash                  6
-Accellion FTA RCE             6
-Firefox RCE                   5
-WordPress Plugin Injection    4
-CVE CVE-2021-28149            4
+Nextcloud Auth Bypass              10
+PHP Type Confusion                  8
+Laravel Framework RCE               8
+Apache Crash                        7
+Windows TCP/IP Remote Execution     7
+Slack Escape                        6
+K8s SSRF                            6
+Signal Auth Bypass                  6
+Kernel Out-of-Bounds                5
+WebLogic RCE                        4
 Name: count, dtype: int64
 
 CVE-based Alerts:
-  Total CVE-specific alerts: 128
-  Unique CVEs detected: 51
+  Total CVE-specific alerts: 127
+  Unique CVEs detected: 44
   Top CVEs:
 cve_id
-CVE-2018-4939     8
-CVE-2021-30609    8
-CVE-2021-23840    7
-CVE-2020-25696    6
-CVE-2021-26852    6
-CVE-2020-13933    6
-CVE-2020-15505    6
-CVE-2021-30130    5
-CVE-2021-24497    4
-CVE-2021-28149    4
+CVE-2021-24514    10
+CVE-2021-28850     8
+CVE-2021-3129      8
+CVE-2020-13933     7
+CVE-2020-16898     7
+CVE-2021-34482     6
+CVE-2020-8555      6
+CVE-2020-13777     6
+CVE-2020-24615     5
+CVE-2018-4939      4
 Name: count, dtype: int64
 
-Time Range: 2026-07-18 11:53:07.478920 to 2026-07-18 15:06:59.478920
+Time Range: 2026-07-24 21:51:09.397373 to 2026-07-25 01:06:27.397373
 OK Alerts saved to /Users/ayangain/repos/TAG-IDS/ids_outputs/ids_alerts.csv
-Added 17 CVE_INFO placeholders.
-Hosts with alert coverage : 60/80
-Unmonitored hosts (sensor gap): 20
+Added 16 CVE_INFO placeholders.
+Hosts with alert coverage : 64/80
+Unmonitored hosts (sensor gap): 16
 ============================================================
 CONSISTENCY CHECK: TAG vs IDS
 ============================================================
-TAG hosts: 80 | IDS hosts: 60
-Only in TAG: ['h12', 'h20', 'h21', 'h22', 'h25', 'h27', 'h33', 'h42', 'h5', 'h56', 'h57', 'h61', 'h63', 'h65', 'h68', 'h70', 'h72', 'h75', 'h80', 'h9']
+TAG hosts: 80 | IDS hosts: 64
+Only in TAG: ['h14', 'h23', 'h24', 'h27', 'h31', 'h39', 'h40', 'h43', 'h44', 'h55', 'h57', 'h59', 'h68', 'h71', 'h80', 'h9']
 Only in IDS: []
 CVE alerts with dst host mismatch: 0
 CVE IDs missing from CVE_INFO: []
@@ -84,10 +84,10 @@ Attack type mismatches: 0
 
 Severity Distribution:
 severity
-HIGH        53
-CRITICAL    38
-MEDIUM      33
-LOW          4
+HIGH        65
+MEDIUM      35
+CRITICAL    17
+LOW         10
 
 WARN: Sensor gap detected. Some hosts in the TAG are unmonitored by the IDS (expected by design).
 Darwin
@@ -96,92 +96,92 @@ OK All graphs pruned and exported successfully.
 Using base directory: /Users/ayangain/repos/TAG-IDS
 
 Processing T1...
-[T1] Original edges: 175
-[T1] Reduced edges: 28
+[T1] Original edges: 540
+[T1] Reduced edges: 60
 [T1] Replaced original files OK
 
 Processing T2...
-[T2] Original edges: 546
-[T2] Reduced edges: 56
+[T2] Original edges: 165
+[T2] Reduced edges: 32
 [T2] Replaced original files OK
 
 Processing T3...
-[T3] Original edges: 510
-[T3] Reduced edges: 60
+[T3] Original edges: 420
+[T3] Reduced edges: 56
 [T3] Replaced original files OK
 
 Processing T4...
-[T4] Original edges: 341
+[T4] Original edges: 297
 [T4] Reduced edges: 52
 [T4] Replaced original files OK
 /Users/ayangain/Library/Application Support/neo4j-desktop/Application/Data/dbmss/dbms-6bba7430-e536-456c-a002-26afc7345ce2/import
 Temporal Attack Graph Created Successfully
-2.280259132385254 seconds
+2.6668848991394043 seconds
 ==========================================================
   Idea 3: Alert Chain Validity Validator
 ==========================================================
 
 [1/6] Loading raw data...
-  OK Alerts loaded       : 128
+  OK Alerts loaded       : 127
   OK Hosts with CVEs     : 80
 
 [3/6] Building host->node_id index from VERTICES CSVs...
-  OK Index entries built : 131
+  OK Index entries built : 127
+    ('h5', 'T1') -> node_id 4
     ('h10', 'T1') -> node_id 9
-    ('h15', 'T1') -> node_id 14
-    ('h17', 'T1') -> node_id 16
-    ('h18', 'T1') -> node_id 17
-    ('h19', 'T1') -> node_id 18
+    ('h12', 'T1') -> node_id 11
+    ('h13', 'T1') -> node_id 12
+    ('h14', 'T1') -> node_id 13
 
 [2/6] Assigning time windows from TAG windows...
   OK Found actual time_window in alerts data.
   OK TAG windows detected: ['T1', 'T2', 'T3', 'T4']
   OK Alerts per window   :
 time_window
-T1    24
-T2    19
-T3    35
-T4    50
+T1    43
+T2    29
+T3    32
+T4    23
 
 [4/6] Mapping alerts to TAG nodes...
-  OK Mapped              : 128 (100.0%)
+  OK Mapped              : 127 (100.0%)
   X Unmapped            : 0
   Building paths locally from ARCS/VERTICES CSVs...
-  OK Local paths computed: 517
-  OK Path lookup entries : 476
+  OK Local paths computed: 489
+  OK Path lookup entries : 471
 
 [6/6] Classifying alert pairs...
-  OK Total pairs classified: 72
+  OK Total pairs classified: 61
 
 ============================================================
   ALERT CHAIN CLASSIFICATION REPORT
 ============================================================
 
-  Total alerts          : 128
+  Total alerts          : 127
   Unmapped alerts       : 0
-  Total pairs evaluated : 72
+  Total pairs evaluated : 61
 
-  STRUCTURALLY_VALID                :     5  (6.9%)
-  STRUCTURALLY_IMPOSSIBLE           :    62  (86.1%)
-  STRUCTURALLY_AMBIGUOUS            :     5  (6.9%)
+  STRUCTURALLY_VALID                :     8  (13.1%)
+  STRUCTURALLY_IMPOSSIBLE           :    49  (80.3%)
+  STRUCTURALLY_AMBIGUOUS            :     4  (6.6%)
 
-  Cross-window pairs    : 11
-    STRUCTURALLY_IMPOSSIBLE           : 7
-    STRUCTURALLY_VALID                : 3
-    STRUCTURALLY_AMBIGUOUS            : 1
+  Cross-window pairs    : 13
+    STRUCTURALLY_IMPOSSIBLE           : 13
 
   Valid chain severity (alert A):
 alert_a_severity
-CRITICAL    3
+HIGH        3
 MEDIUM      2
+LOW         2
+CRITICAL    1
 
   Top 5 valid transitions:
-   alert_a_attack_type        alert_b_attack_type  count
-PostgreSQL Auth Bypass WordPress Plugin Injection      1
-    CVE CVE-2021-28149    Spring Cloud Config RCE      1
-          WebLogic RCE          Accellion FTA RCE      1
-    CVE CVE-2021-28149         CVE CVE-2021-23215      1
-PostgreSQL Auth Bypass          Print Spooler RCE      1
+            alert_a_attack_type     alert_b_attack_type  count
+Windows TCP/IP Remote Execution      CVE CVE-2021-23214      1
+                   Slack Escape Spring Cloud Config RCE      1
+          Service Privilege Esc   Nextcloud Auth Bypass      1
+             CVE CVE-2020-26139      CVE CVE-2020-27240      1
+             Signal Auth Bypass     Grafana Auth Bypass      1
 
 ============================================================
   OK Full results        : /Users/ayangain/repos/TAG-IDS/ids_outputs/alert_chain_classification.csv
@@ -191,31 +191,31 @@ PostgreSQL Auth Bypass          Print Spooler RCE      1
 ==========================================================
 
 [2/6] Building TAG node registry per window...
-  OK T1: 26 nodes
-  OK T2: 40 nodes
-  OK T3: 35 nodes
-  OK T4: 30 nodes
+  OK T1: 37 nodes
+  OK T2: 26 nodes
+  OK T3: 31 nodes
+  OK T4: 33 nodes
 
 [1/6] Loading IDS alerts...
   OK Found actual time_window in alerts data.
-  OK Alerts loaded       : 128
+  OK Alerts loaded       : 127
   OK TAG windows         : ['T1', 'T2', 'T3', 'T4']
 
 [3/6] Computing alerted node sets per window...
-  OK T1: 12 alerted nodes
-  OK T2: 15 alerted nodes
-  OK T3: 20 alerted nodes
-  OK T4: 17 alerted nodes
+  OK T1: 18 alerted nodes
+  OK T2: 13 alerted nodes
+  OK T3: 13 alerted nodes
+  OK T4: 16 alerted nodes
 
 [4/6] Loading temporal paths for path-critical check...
   OK Source           : local NetworkX fallback
-  OK Path nodes found : 80
+  OK Path nodes found : 78
 
 [5/6] Classifying nodes per window...
-  T1: total=26  monitored=12  blind_spots=14  (path_critical=14)
-  T2: total=40  monitored=15  blind_spots=25  (path_critical=25)
-  T3: total=35  monitored=20  blind_spots=15  (path_critical=15)
-  T4: total=30  monitored=17  blind_spots=13  (path_critical=13)
+  T1: total=37  monitored=18  blind_spots=19  (path_critical=19)
+  T2: total=26  monitored=13  blind_spots=13  (path_critical=12)
+  T3: total=31  monitored=13  blind_spots=18  (path_critical=18)
+  T4: total=33  monitored=16  blind_spots=17  (path_critical=17)
 
 [6/6] Computing summaries and dynamic transitions...
   OK Per-window summary  : /Users/ayangain/repos/TAG-IDS/ids_outputs/blind_spot_per_window.csv
@@ -228,33 +228,33 @@ PostgreSQL Auth Bypass          Print Spooler RCE      1
 
   Window    Total  Monitored   Total BS  Path-Critical  BS Ratio%  Coverage%
   ---------------------------------------------------------------------------
-  T1           26         12         14             14      53.8%      46.2%
-  T2           40         15         25             25      62.5%      37.5%
-  T3           35         20         15             15      42.9%      57.1%
-  T4           30         17         13             13      43.3%      56.7%
+  T1           37         18         19             19      51.4%      48.6%
+  T2           26         13         13             12      50.0%      50.0%
+  T3           31         13         18             18      58.1%      41.9%
+  T4           33         16         17             17      51.5%      48.5%
 
   Aggregate across all windows:
-    Total node-window instances   : 131
-    Blind spot instances          : 67 (51.1%)
-    Path-critical blind spots     : 67 (51.1%)
+    Total node-window instances   : 127
+    Blind spot instances          : 67 (52.8%)
+    Path-critical blind spots     : 66 (52.0%)
 =================================================================
 
 =================================================================
   KEY FINDINGS FOR PAPER
 =================================================================
 
-  1. Average blind spot ratio across windows : 50.6%
-     Peak blind spot ratio                  : 62.5% (T2)
-     Average IDS coverage                   : 49.4%
+  1. Average blind spot ratio across windows : 52.8%
+     Peak blind spot ratio                  : 58.1% (T3)
+     Average IDS coverage                   : 47.2%
 
-  2. Total blind spots: 67 (51.1% of total nodes)
-     Path-critical blind spots (on valid paths): 67 (100.0% of blind spots)
+  2. Total blind spots: 67 (52.8% of total nodes)
+     Path-critical blind spots (on valid paths): 66 (98.5% of blind spots)
      These are invisible to IDS but structurally critical for attack progression.
 
   3. Dynamic Blind Spot Transitions:
-     EMERGED: 13, RESOLVED: 11, PERSISTED: 10
-     Hosts that became blind spots: 13
-     Hosts that recovered monitoring: 11
+     EMERGED: 9, RESOLVED: 9, PERSISTED: 12
+     Hosts that became blind spots: 9
+     Hosts that recovered monitoring: 9
 
   -> Static IDS tools cannot detect these
     because they have no temporal graph model.
@@ -264,33 +264,33 @@ PostgreSQL Auth Bypass          Print Spooler RCE      1
 ==========================================================
 
 [1/7] Loading data...
-  OK Blind spot nodes    : 131
-  OK Alerts loaded       : 128
+  OK Blind spot nodes    : 127
+  OK Alerts loaded       : 127
   OK Hosts with CVEs     : 80
 
 [3/7] Building TAG graphs per window...
-  OK T1: 26 nodes, 28 edges
-  OK T2: 40 nodes, 56 edges
-  OK T3: 35 nodes, 60 edges
-  OK T4: 30 nodes, 52 edges
+  OK T1: 37 nodes, 60 edges
+  OK T2: 26 nodes, 32 edges
+  OK T3: 31 nodes, 56 edges
+  OK T4: 33 nodes, 52 edges
 
 [2/7] Assigning time windows from TAG windows...
   OK TAG windows         : ['T1', 'T2', 'T3', 'T4']
 
 [4/7] Computing betweenness centrality on combined temporal graph...
-  OK Combined graph      : 80 nodes, 190 edges
-  OK Max betweenness     : 0.0491
+  OK Combined graph      : 80 nodes, 196 edges
+  OK Max betweenness     : 0.1705
   OK Re-normalized BC    : max=1.000, min=0.0000
-  OK T1: 26 nodes, max_bc=0.7928
-  OK T2: 40 nodes, max_bc=1.0000
-  OK T3: 35 nodes, max_bc=1.0000
-  OK T4: 30 nodes, max_bc=1.0000
+  OK T1: 37 nodes, max_bc=0.5050
+  OK T2: 26 nodes, max_bc=1.0000
+  OK T3: 31 nodes, max_bc=1.0000
+  OK T4: 33 nodes, max_bc=1.0000
 
 [5/7] Computing path criticality and persistence...
-  OK Path-critical nodes : 80
+  OK Path-critical nodes : 78
 
 [6/7] Computing Structural Triage Scores...
-  OK Scored alerts       : 128
+  OK Scored alerts       : 127
 
   OK Scored alerts       : /Users/ayangain/repos/TAG-IDS/ids_outputs/structural_triage_scores.csv
   OK Rank comparison     : /Users/ayangain/repos/TAG-IDS/ids_outputs/triage_comparison.csv
@@ -300,53 +300,53 @@ PostgreSQL Auth Bypass          Print Spooler RCE      1
   STRUCTURAL TRIAGE SCORE REPORT
 ====================================================================
 
-  Total alerts scored         : 128
-  Promoted by STS (rank +>5)  : 32  (25.0%)
-  Demoted by STS  (rank -<5)  : 79  (61.7%)
-  Rank stable (within +/-5)   : 17  (13.3%)
+  Total alerts scored         : 127
+  Promoted by STS (rank +>5)  : 29  (22.8%)
+  Demoted by STS  (rank -<5)  : 86  (67.7%)
+  Rank stable (within +/-5)   : 12  (9.4%)
 
   Top 5 alerts PROMOTED by structural context:
   (Low CVSS severity but high structural importance)
 dest_host severity         cve_id time_window  cvss_only_score  structural_triage_score  cvss_rank  sts_rank  rank_delta  c_betweenness  c_path_critical  c_persistence
-      h49   MEDIUM CVE-2021-23880          T3              0.5                   0.5400         92         1          91          0.793              1.0           0.75
-      h49   MEDIUM CVE-2021-23880          T3              0.5                   0.5400         92         1          91          0.793              1.0           0.75
-      h49   MEDIUM CVE-2021-23880          T2              0.5                   0.5400         92         1          91          0.793              1.0           0.75
-       h7   MEDIUM CVE-2021-27065          T3              0.5                   0.3619         92        27          65          0.284              1.0           0.75
-      h19   MEDIUM CVE-2020-25696          T1              0.5                   0.3394         92        30          62          0.398              1.0           0.50
+      h20      LOW CVE-2020-13777          T2             0.25                   0.5750        118         5         113          1.000              1.0           0.75
+       h5      LOW CVE-2020-16898          T1             0.25                   0.3312        118        25          93          0.303              1.0           0.75
+       h5      LOW CVE-2020-16898          T2             0.25                   0.3312        118        25          93          0.303              1.0           0.75
+      h21   MEDIUM CVE-2021-24514          T4             0.50                   0.5018         83         7          76          0.505              1.0           1.00
+      h21   MEDIUM CVE-2021-24514          T4             0.50                   0.5018         83         7          76          0.505              1.0           1.00
 
   Top 5 alerts DEMOTED by structural context:
   (High CVSS severity but low structural importance)
 dest_host severity         cve_id time_window  cvss_only_score  structural_triage_score  cvss_rank  sts_rank  rank_delta  c_betweenness  c_path_critical  c_persistence
-      h54 CRITICAL CVE-2020-16898          T2              1.0                   0.2125          1        85         -84            0.0              1.0           0.25
-      h29 CRITICAL CVE-2020-13933          T4              1.0                   0.2125          1        85         -84            0.0              1.0           0.25
-      h29 CRITICAL CVE-2020-13933          T4              1.0                   0.2125          1        85         -84            0.0              1.0           0.25
-      h16 CRITICAL CVE-2021-22569          T2              1.0                   0.2125          1        85         -84            0.0              1.0           0.25
-      h60 CRITICAL CVE-2021-23214          T1              1.0                   0.2125          1        85         -84            0.0              1.0           0.25
+      h22     HIGH CVE-2020-16000          T1             0.75                    0.175         18        91         -73            0.0              1.0           0.25
+      h30     HIGH  CVE-2020-8558          T2             0.75                    0.175         18        91         -73            0.0              1.0           0.25
+      h30     HIGH  CVE-2020-8558          T2             0.75                    0.175         18        91         -73            0.0              1.0           0.25
+      h38     HIGH CVE-2021-34482          T4             0.75                    0.175         18        91         -73            0.0              1.0           0.25
+      h77     HIGH  CVE-2020-8555          T2             0.75                    0.175         18        91         -73            0.0              0.0           0.25
 
   Mean STS vs CVSS-only by severity:
   Severity    Count  CVSS-only   STS mean   STS > CVSS
   ----------------------------------------------------
-  LOW             4      0.250      0.160         0.0%
-  MEDIUM         33      0.500      0.258         9.1%
-  HIGH           53      0.750      0.262         0.0%
-  CRITICAL       38      1.000      0.309         0.0%
+  LOW            10      0.250      0.219        30.0%
+  MEDIUM         35      0.500      0.209         5.7%
+  HIGH           65      0.750      0.279         0.0%
+  CRITICAL       17      1.000      0.315         0.0%
 ====================================================================
 
 ====================================================================
   KEY FINDINGS FOR PAPER
 ====================================================================
 
-  1. 32 alerts (25.0%) are ranked
+  1. 29 alerts (22.8%) are ranked
      significantly HIGHER by STS than by CVSS alone.
      These are alerts CVSS would deprioritize but the TAG
      identifies as structurally dangerous.
 
-  2. 79 alerts (61.7%) are ranked
+  2. 86 alerts (67.7%) are ranked
      significantly LOWER by STS than by CVSS alone.
      These are high-severity alerts on structurally dead-end
      nodes - CVSS overprioritizes them.
 
-  3. Explained Variance (r²): 0.085 (from r=0.291)
+  3. Explained Variance (r²): 0.085 (from r=0.292)
      Severity explains only 8.5% of STS variance, leaving
      91.5% explained by structural components.
      (Note: STS score variance and severity correlation can fluctuate widely
@@ -354,9 +354,9 @@ dest_host severity         cve_id time_window  cvss_only_score  structural_triag
      consider this variance range across multiple network configurations.)
 
   5. Example demotion:
-     Host h79 | Severity: CRITICAL
-     CVSS score: 1.000  ->  STS: 0.275
-     Betweenness: 0.000  Path-critical: 1  Persistence: 0.500
+     Host h67 | Severity: CRITICAL
+     CVSS score: 1.000  ->  STS: 0.278
+     Betweenness: 0.010  Path-critical: 1  Persistence: 0.500
 ====================================================================
 ============================================================
 Cross-Window Vulnerability Persistence Risk
@@ -366,27 +366,27 @@ Cross-Window Vulnerability Persistence Risk
   OK Hosts with CVEs     : 80
 
 [2/6] Loading TAG structure per window...
-  OK T1: 26 hosts, 26 nodes, 28 edges
-  OK T2: 40 hosts, 40 nodes, 56 edges
-  OK T3: 35 hosts, 35 nodes, 60 edges
-  OK T4: 30 hosts, 30 nodes, 52 edges
+  OK T1: 37 hosts, 37 nodes, 60 edges
+  OK T2: 26 hosts, 26 nodes, 32 edges
+  OK T3: 31 hosts, 31 nodes, 56 edges
+  OK T4: 33 hosts, 33 nodes, 52 edges
 
 [3/6] Computing CVE persistence per host...
-  OK CVE-host pairs tracked : 117
+  OK CVE-host pairs tracked : 116
 
 [4/6] Computing structural importance per node...
   OK Nodes analyzed         : 80
-  OK Path-critical nodes    : 80
+  OK Path-critical nodes    : 78
 
 [5/6] Computing persistence-structure correlation...
 
   Pair                                           r    p-value   sig
   -----------------------------------------------------------------
-  max_span vs path_critical                    N/A        N/A   N/A  <- variance=0 (e.g. all nodes path-critical)
-  max_span vs avg_degree                     0.010     0.9298    ns
-  exposure_score vs path_critical              N/A        N/A   N/A  <- variance=0 (e.g. all nodes path-critical)
-  exposure_score vs avg_degree               0.049     0.6656    ns
-  critical_CVEs vs path_critical               N/A        N/A   N/A  <- variance=0 (e.g. all nodes path-critical)
+  max_span vs path_critical                  0.134     0.2358    ns
+  max_span vs avg_degree                    -0.069     0.5445    ns
+  exposure_score vs path_critical            0.128     0.2594    ns
+  exposure_score vs avg_degree               0.047     0.6785    ns
+  critical_CVEs vs path_critical             0.132     0.2432    ns
 
 [6/6] Saving results...
 
@@ -402,52 +402,51 @@ Cross-Window Vulnerability Persistence Risk
   CVE Persistence Distribution:
     Span    Count      Pct
   --------------------------
-       1       60    51.3%  ##########
-       2       40    34.2%  ######
-       3       16    13.7%  ##
+       1       64    55.2%  ###########
+       2       41    35.3%  #######
+       3       10     8.6%  #
        4        1     0.9%  
 
   Chronic Risk Nodes (persistent + path-critical):
   Host      MaxSpan  ExposureScore  CritCVEs Tier                
   --------------------------------------------------------------
-  h4              3          5.250         1 CRITICAL_CHRONIC    
-  h7              3          5.250         1 CRITICAL_CHRONIC    
-  h71             3          5.250         1 CRITICAL_CHRONIC    
-  h74             3          5.250         1 CRITICAL_CHRONIC    
-  h13             3          4.500         0 HIGH_CHRONIC        
-  h38             3          4.500         0 HIGH_CHRONIC        
-  h32             4          4.000         1 CRITICAL_CHRONIC    
-  h34             3          3.000         1 CRITICAL_CHRONIC    
-  h49             3          3.000         1 CRITICAL_CHRONIC    
-  h17             3          2.250         0 HIGH_CHRONIC        
-  h64             3          2.250         0 HIGH_CHRONIC        
+  h5              3          5.250         1 CRITICAL_CHRONIC    
+  h48             3          4.500         1 CRITICAL_CHRONIC    
+  h76             3          4.500         0 HIGH_CHRONIC        
+  h10             3          3.000         1 CRITICAL_CHRONIC    
+  h21             4          3.000         0 HIGH_CHRONIC        
+  h47             3          3.000         1 CRITICAL_CHRONIC    
+  h20             3          2.250         0 HIGH_CHRONIC        
+  h70             3          2.250         0 HIGH_CHRONIC        
 
   Attack Surface Evolution Across Windows:
   Window    Hosts   CVEs  CritCVEs  PathCrit  Exposure   New  Gone
   --------------------------------------------------------------
-  T1           26     35        10        26     27.50    35     0
-  T2           40     58        22        40     46.75    41    18
-  T3           35     51        16        35     40.50    27    34
-  T4           30     48        17        30     39.00    22    25
+  T1           37     53        18        37     42.00    53     0
+  T2           26     33        11        22     26.25    20    40
+  T3           31     46        15        31     36.50    36    23
+  T4           33     48        18        33     39.00    20    18
 ====================================================================
 
 ====================================================================
   KEY FINDINGS FOR PAPER
 ====================================================================
 
-  1. 57 of 117 CVE-host pairs (48.7%)
+  1. 52 of 116 CVE-host pairs (44.8%)
      persist across more than one time window.
-     Average persistence span: 1.64 windows.
+     Average persistence span: 1.55 windows.
 
   2. 1 CVE-host pairs present across ALL 4 windows
      - these are chronically unpatched vulnerabilities.
-     h32 | CVE-2020-15505 | CRITICAL
+     h21 | CVE-2021-24514 | HIGH
 
-  3. Highest single-CVE exposure score: 4.000
-     Host: h32 | CVE: CVE-2020-15505
-     Severity: CRITICAL | Span: 4 windows
+  3. Highest single-CVE exposure score: 3.000
+     Host: h10 | CVE: CVE-2020-1470
+     Severity: CRITICAL | Span: 3 windows
 
-  4. Highest aggregate host risk score: h4 | aggregate_score=5.250
+  4. Highest aggregate host risk score: h5 | aggregate_score=5.250
+
+  5. Exposure score vs path criticality: r=0.128 (p=0.2594, ns)
 ====================================================================
 ============================================================
   Idea 4: CVE Lifecycle Impact on Attack Surface
@@ -455,42 +454,42 @@ Cross-Window Vulnerability Persistence Risk
 
 [1/7] Loading data for lifecycle analysis...
   OK Hosts with CVEs     : 80
-  OK T1: 26 hosts, 26 nodes, 28 edges
-  OK T2: 40 hosts, 40 nodes, 56 edges
-  OK T3: 35 hosts, 35 nodes, 60 edges
-  OK T4: 30 hosts, 30 nodes, 52 edges
+  OK T1: 37 hosts, 37 nodes, 60 edges
+  OK T2: 26 hosts, 26 nodes, 32 edges
+  OK T3: 31 hosts, 31 nodes, 56 edges
+  OK T4: 33 hosts, 33 nodes, 52 edges
 
 [2/7] Simulating CVE lifecycle phases...
-  OK CVE-host-window entries : 468
-    UNPUBLISHED         :     36 (7.7%)
-    PUBLISHED           :     89 (19.0%)
-    EXPLOIT_AVAILABLE   :    206 (44.0%)
-    PATCHED             :    137 (29.3%)
-  OK Unique (host,CVE) pairs : 117
-  OK Never patched in sim    : 48
+  OK CVE-host-window entries : 464
+    UNPUBLISHED         :     30 (6.5%)
+    PUBLISHED           :     88 (19.0%)
+    EXPLOIT_AVAILABLE   :    209 (45.0%)
+    PATCHED             :    137 (29.5%)
+  OK Unique (host,CVE) pairs : 116
+  OK Never patched in sim    : 44
 
 [3/7] Computing attack surface per window per lifecycle state...
-  OK T1: exploitable_hosts=30 full_pairs=73 lifecycle_pairs=22 reduction=69.9%
-  OK T2: exploitable_hosts=56 full_pairs=150 lifecycle_pairs=112 reduction=25.3%
-  OK T3: exploitable_hosts=51 full_pairs=139 lifecycle_pairs=59 reduction=57.6%
-  OK T4: exploitable_hosts=39 full_pairs=109 lifecycle_pairs=38 reduction=65.1%
+  OK T1: exploitable_hosts=39 full_pairs=157 lifecycle_pairs=38 reduction=75.8%
+  OK T2: exploitable_hosts=59 full_pairs=72 lifecycle_pairs=51 reduction=29.2%
+  OK T3: exploitable_hosts=48 full_pairs=123 lifecycle_pairs=56 reduction=54.5%
+  OK T4: exploitable_hosts=35 full_pairs=99 lifecycle_pairs=23 reduction=76.8%
 
 [4/7] Computing reachability deltas across windows...
-  OK Transitions total    : 92
-    BECAME_REACHABLE      : 49
-    BECAME_UNREACHABLE    : 43
-    cause=TOPOLOGY_CHANGE     : 60
-    cause=NEW_EXPLOIT         : 21
-    cause=PATCHED             : 11
+  OK Transitions total    : 70
+    BECAME_REACHABLE      : 33
+    BECAME_UNREACHABLE    : 37
+    cause=TOPOLOGY_CHANGE     : 47
+    cause=NEW_EXPLOIT         : 14
+    cause=PATCHED             : 9
 
 [5/7] Computing danger window statistics...
-  OK Unique (host,CVE) pairs : 117
-    FULL_LIFECYCLE           : 69
-    EXPLOITED_UNPATCHED      : 45
-    NEVER_EXPLOITED          : 3
-  OK Avg danger window       : 1.93 windows
+  OK Unique (host,CVE) pairs : 116
+    FULL_LIFECYCLE           : 72
+    EXPLOITED_UNPATCHED      : 42
+    NEVER_EXPLOITED          : 2
+  OK Avg danger window       : 1.88 windows
   OK Max danger window       : 3 windows
-  OK Avg pre-exploit gap     : 0.78 windows
+  OK Avg pre-exploit gap     : 0.76 windows
 
 [7/7] Saving results...
   OK Lifecycle phases     : /Users/ayangain/repos/TAG-IDS/ids_outputs/cve_lifecycle_phases.csv
@@ -506,62 +505,62 @@ Cross-Window Vulnerability Persistence Risk
   Attack Surface Per Window:
   Win   Hosts  Exploit  Patched  FullPairs  LCPairs    Reduction  EdgesRem 
   --------------------------------------------------------------------
-  T1    26     10       0        73         22             69.9% 17       
-  T2    40     33       7        150        112            25.3% 7        
-  T3    35     21       18       139        59             57.6% 27       
-  T4    30     17       23       109        38             65.1% 30       
+  T1    37     15       3        157        38             75.8% 34       
+  T2    26     19       3        72         51             29.2% 9        
+  T3    31     16       19       123        56             54.5% 21       
+  T4    33     11       25       99         23             76.8% 30       
 
   Danger Window Distribution:
   Span   Count    Pct      AvgSevWt  
   ----------------------------------
-  1      30         28.0%     0.833  #####
-  2      55         51.4%     0.805  ##########
-  3      22         20.6%     0.727  ####
+  1      30         27.0%     0.825  #####
+  2      64         57.7%     0.820  ###########
+  3      17         15.3%     0.750  ###
 
   Lifecycle Category by Severity:
   Category                   LOW    MED    HIGH   CRIT   Total 
   ----------------------------------------------------------
-  FULL_LIFECYCLE             0      1      30     38     69    
-  EXPLOITED_UNPATCHED        0      10     35     0      45    
-  NEVER_EXPLOITED            0      3      0      0      3     
+  FULL_LIFECYCLE             0      0      34     38     72    
+  EXPLOITED_UNPATCHED        0      8      34     0      42    
+  NEVER_EXPLOITED            0      2      0      0      2     
 
   Reachability Transitions Across Windows:
-    T1->T2: +25 reachable, -2 unreachable  (exploit=15 patch=0 topo=12)
-    T2->T3: +14 reachable, -26 unreachable  (exploit=4 patch=6 topo=30)
-    T3->T4: +10 reachable, -15 unreachable  (exploit=2 patch=5 topo=18)
+    T1->T2: +12 reachable, -12 unreachable  (exploit=8 patch=0 topo=16)
+    T2->T3: +13 reachable, -12 unreachable  (exploit=3 patch=3 topo=19)
+    T3->T4: +8 reachable, -13 unreachable  (exploit=3 patch=6 topo=12)
 ======================================================================
 
 ======================================================================
   KEY FINDINGS FOR PAPER
 ======================================================================
 
-  1. The lifecycle-aware attack surface is on average 54.5% smaller
+  1. The lifecycle-aware attack surface is on average 59.1% smaller
      than the full graph assumption.
-     Full graph avg reachability pairs : 118
-     Lifecycle-aware avg pairs         : 58
+     Full graph avg reachability pairs : 113
+     Lifecycle-aware avg pairs         : 42
      -> Static analysis overestimates attack surface by ignoring
         CVE lifecycle state.
 
-  2. Average danger window: 1.93 time windows
+  2. Average danger window: 1.88 time windows
      Maximum danger window: 3 time windows
-     Highest weighted danger: h12 | CVE-2021-40346 | HIGH (score=2.250)
+     Highest weighted danger: h13 | CVE-2021-22557 | HIGH (score=2.250)
 
-  3. Peak exploitation window: T2 (33 hosts with active exploits)
+  3. Peak exploitation window: T2 (19 hosts with active exploits)
      This is when IDS monitoring is most critical.
 
-  4. 45 of 117 CVE-host pairs (38.5%)
+  4. 42 of 116 CVE-host pairs (36.2%)
      remain exploitable throughout the simulation — never patched.
      (Calibrated to empirical data: ~30-40% of disclosed CVEs remain
       unpatched at 12 months [NVD Annual Report 2023; CISA KEV data])
      Of these, 0 are CRITICAL severity.
 
   5. For CVEs completing full lifecycle:
-     Avg pre-exploit gap   : 0.30 windows (advisory-only)
-     Avg exploit window    : 1.61 windows (active danger)
+     Avg pre-exploit gap   : 0.33 windows (advisory-only)
+     Avg exploit window    : 1.74 windows (active danger)
      This gap is the window of opportunity for proactive patching.
 
-  6. Reachability churn: 21 nodes became reachable due to new exploits,
-     11 became unreachable due to patching.
+  6. Reachability churn: 14 nodes became reachable due to new exploits,
+     9 became unreachable due to patching.
      -> Temporal lifecycle modeling captures attack surface
         dynamics invisible to static graph analysis.
 
@@ -575,30 +574,30 @@ Cross-Window Vulnerability Persistence Risk
 ============================================================
 
 [1/7] Loading TAG structure and IDS alerts...
-  OK Alerts loaded       : 128
+  OK Alerts loaded       : 127
   OK Hosts with CVEs     : 80
-  OK T1: 26 nodes, 28 edges
-  OK T2: 40 nodes, 56 edges
-  OK T3: 35 nodes, 60 edges
-  OK T4: 30 nodes, 52 edges
+  OK T1: 37 nodes, 60 edges
+  OK T2: 26 nodes, 32 edges
+  OK T3: 31 nodes, 56 edges
+  OK T4: 33 nodes, 52 edges
 
 [2/7] Extracting temporal attack paths...
-  OK Combined graph      : 80 nodes, 190 edges
-  OK Temporal paths found: 2948
-     Avg path length     : 4.2 nodes
+  OK Combined graph      : 80 nodes, 196 edges
+  OK Temporal paths found: 3890
+     Avg path length     : 4.3 nodes
      Max path length     : 5 nodes
-     Unique nodes on paths: 80
-     Sample path 1: h10 -> h67 -> h17
-     Sample path 2: h10 -> h20
-     Sample path 3: h10 -> h22
+     Unique nodes on paths: 78
+     Sample path 1: h5 -> h21 -> h57 -> h20 -> h10
+     Sample path 2: h5 -> h21 -> h62 -> h20 -> h10
+     Sample path 3: h5 -> h21 -> h58 -> h20 -> h10
 
 [3/7] Solving minimum hitting set (greedy)...
-  OK Greedy cover size   : 29 nodes
-  OK Iterations needed   : 29
-  OK All 2948 paths covered: YES
+  OK Greedy cover size   : 31 nodes
+  OK Iterations needed   : 31
+  OK All 3890 paths covered: YES
 
 [4/7] Attempting exact ILP solution...
-  OK ILP cover size      : 28 nodes
+  OK ILP cover size      : 31 nodes
   OK ILP optimal         : YES (exact solution)
 
 [5/7] Computing current IDS alert coverage...
@@ -609,10 +608,10 @@ Cross-Window Vulnerability Persistence Risk
 
 [6/7] Analyzing coverage gap...
   OK Method used         : ILP (exact)
-  OK Optimal cover       : 28 nodes -> 2948/2948 paths (100.0%)
-  OK Current monitoring  : 50 nodes -> 2911/2948 paths (98.7%)
-  OK Coverage gap nodes  : 8
-  OK Excess monitoring   : 30
+  OK Optimal cover       : 31 nodes -> 3890/3890 paths (100.0%)
+  OK Current monitoring  : 50 nodes -> 3870/3890 paths (99.5%)
+  OK Coverage gap nodes  : 10
+  OK Excess monitoring   : 29
 
 [7/7] Saving results...
   OK Minimum cover set    : /Users/ayangain/repos/TAG-IDS/ids_outputs/minimum_cover_set.csv
@@ -624,157 +623,163 @@ Cross-Window Vulnerability Persistence Risk
   MINIMUM ALERT COVERAGE SET REPORT
 ======================================================================
 
-  Optimal Monitor Set (28 nodes):
+  Optimal Monitor Set (31 nodes):
   Node     Host       PathsThrough  
   ----------------------------------
-  0        h1         39            
-  1        h2         4             
-  3        h4         429           
-  4        h5         154           
-  5        h6         220           
-  6        h7         235           
-  7        h8         69            
-  9        h10        324           
-  10       h11        813           
-  11       h12        77            
-  12       h13        1174          
-  13       h14        537           
-  14       h15        168           
-  15       h16        39            
-  16       h17        602           
-  17       h18        598           
-  18       h19        367           
-  20       h21        126           
-  22       h23        115           
-  23       h24        241           
-  24       h25        126           
-  29       h30        662           
-  31       h32        156           
-  34       h35        344           
-  35       h36        505           
-  36       h37        113           
-  37       h38        148           
-  76       h77        95            
+  2        h3         358           
+  3        h4         264           
+  4        h5         878           
+  5        h6         125           
+  6        h7         564           
+  7        h8         155           
+  8        h9         333           
+  9        h10        709           
+  10       h11        315           
+  11       h12        68            
+  12       h13        33            
+  13       h14        33            
+  14       h15        233           
+  15       h16        224           
+  16       h17        312           
+  17       h18        178           
+  18       h19        348           
+  19       h20        2181          
+  20       h21        1355          
+  21       h22        52            
+  24       h25        155           
+  26       h27        52            
+  29       h30        85            
+  30       h31        49            
+  31       h32        841           
+  33       h34        65            
+  35       h36        163           
+  39       h40        221           
+  41       h42        135           
+  49       h50        106           
+  74       h75        87            
 
   Greedy Selection Order:
   Step   Node     PathsCovered   Remaining 
   ----------------------------------------
-  1      12 (h13)    1174           1774      
-  2      13 (h14)    487            1287      
-  3      18 (h19)    351            936       
-  4      48 (h49)    253            683       
-  5      10 (h11)    230            453       
-  6      16 (h17)    150            303       
-  7      17 (h18)    56             247       
-  8      8 (h9)     50             197       
-  9      23 (h24)    31             166       
-  10     73 (h74)    23             143       
-  11     35 (h36)    20             123       
-  12     5 (h6)     16             107       
-  13     3 (h4)     14             93        
-  14     34 (h35)    14             79        
-  15     6 (h7)     11             68        
-  16     9 (h10)    9              59        
-  17     22 (h23)    8              51        
-  18     20 (h21)    7              44        
-  19     24 (h25)    7              37        
-  20     31 (h32)    7              30        
-  21     7 (h8)     5              25        
-  22     15 (h16)    5              20        
-  23     11 (h12)    4              16        
-  24     36 (h37)    4              12        
-  25     4 (h5)     3              9         
-  26     14 (h15)    3              6         
-  27     76 (h77)    3              3         
-  28     1 (h2)     2              1         
-  29     29 (h30)    1              0         
+  1      19 (h20)    2181           1709      
+  2      20 (h21)    603            1106      
+  3      31 (h32)    424            682       
+  4      15 (h16)    166            516       
+  5      8 (h9)     162            354       
+  6      9 (h10)    104            250       
+  7      4 (h5)     39             211       
+  8      41 (h42)    37             174       
+  9      6 (h7)     27             147       
+  10     5 (h6)     21             126       
+  11     16 (h17)    16             110       
+  12     49 (h50)    13             97        
+  13     10 (h11)    12             85        
+  14     17 (h18)    10             75        
+  15     11 (h12)    9              66        
+  16     2 (h3)     7              59        
+  17     3 (h4)     7              52        
+  18     64 (h65)    7              45        
+  19     18 (h19)    5              40        
+  20     12 (h13)    4              36        
+  21     13 (h14)    4              32        
+  22     21 (h22)    4              28        
+  23     26 (h27)    4              24        
+  24     29 (h30)    4              20        
+  25     30 (h31)    4              16        
+  26     7 (h8)     3              13        
+  27     24 (h25)    3              10        
+  28     33 (h34)    3              7         
+  29     39 (h40)    3              4         
+  30     14 (h15)    2              2         
+  31     74 (h75)    2              0         
 
-  Greedy size: 29  |  ILP size: 28  |  Gap: 1
+  Greedy size: 31  |  ILP size: 31  |  Gap: 0
 
   Coverage Comparison:
   Strategy                  Nodes    PathsCov   PathCov%   Efficiency  
   -------------------------------------------------------------------
-  Optimal (TAG-derived)     28       2948       100.0    % 0.0357      
-  Current IDS placement     50       2911       98.7     % 0.0197      
+  Optimal (TAG-derived)     31       3890       100.0    % 0.0323      
+  Current IDS placement     50       3870       99.5     % 0.0199      
 
   Coverage Gap — nodes that SHOULD be monitored but are NOT:
-    node 4 (h5): appears on 154 paths
-    node 11 (h12): appears on 77 paths
-    node 12 (h13): appears on 1174 paths
-    node 16 (h17): appears on 602 paths
-    node 20 (h21): appears on 126 paths
-    node 24 (h25): appears on 126 paths
-    node 29 (h30): appears on 662 paths
-    node 76 (h77): appears on 95 paths
+    node 2 (h3): appears on 358 paths
+    node 8 (h9): appears on 333 paths
+    node 10 (h11): appears on 315 paths
+    node 13 (h14): appears on 33 paths
+    node 14 (h15): appears on 233 paths
+    node 26 (h27): appears on 52 paths
+    node 30 (h31): appears on 49 paths
+    node 33 (h34): appears on 65 paths
+    node 35 (h36): appears on 163 paths
+    node 39 (h40): appears on 221 paths
 
   Excess Monitoring — monitored nodes NOT in optimal set:
-    node 2 (h3): appears on 162 paths
-    node 25 (h26): appears on 1 paths
-    node 28 (h29): appears on 1 paths
-    node 30 (h31): appears on 43 paths
-    node 33 (h34): appears on 39 paths
-    node 38 (h39): appears on 13 paths
-    node 39 (h40): appears on 101 paths
-    node 40 (h41): appears on 19 paths
-    node 43 (h44): appears on 18 paths
-    node 45 (h46): appears on 101 paths
-    node 46 (h47): appears on 15 paths
-    node 47 (h48): appears on 5 paths
-    node 48 (h49): appears on 581 paths
-    node 49 (h50): appears on 144 paths
-    node 50 (h51): appears on 116 paths
-    node 51 (h52): appears on 20 paths
-    node 52 (h53): appears on 28 paths
-    node 53 (h54): appears on 15 paths
-    node 54 (h55): appears on 21 paths
-    node 58 (h59): appears on 86 paths
-    node 59 (h60): appears on 12 paths
-    node 61 (h62): appears on 24 paths
-    node 65 (h66): appears on 150 paths
-    node 66 (h67): appears on 216 paths
-    node 68 (h69): appears on 38 paths
-    node 70 (h71): appears on 47 paths
-    node 72 (h73): appears on 24 paths
-    node 73 (h74): appears on 174 paths
-    node 75 (h76): appears on 174 paths
-    node 78 (h79): appears on 37 paths
+    node 0 (h1): appears on 222 paths
+    node 25 (h26): appears on 26 paths
+    node 32 (h33): appears on 31 paths
+    node 34 (h35): appears on 31 paths
+    node 36 (h37): appears on 61 paths
+    node 37 (h38): appears on 295 paths
+    node 40 (h41): appears on 31 paths
+    node 46 (h47): appears on 42 paths
+    node 47 (h48): appears on 851 paths
+    node 48 (h49): appears on 6 paths
+    node 50 (h51): appears on 36 paths
+    node 51 (h52): appears on 377 paths
+    node 53 (h54): appears on 30 paths
+    node 55 (h56): appears on 36 paths
+    node 57 (h58): appears on 630 paths
+    node 59 (h60): appears on 30 paths
+    node 60 (h61): appears on 35 paths
+    node 62 (h63): appears on 6 paths
+    node 63 (h64): appears on 6 paths
+    node 65 (h66): appears on 36 paths
+    node 66 (h67): appears on 74 paths
+    node 68 (h69): appears on 74 paths
+    node 69 (h70): appears on 41 paths
+    node 71 (h72): appears on 78 paths
+    node 72 (h73): appears on 113 paths
+    node 73 (h74): appears on 81 paths
+    node 75 (h76): appears on 39 paths
+    node 76 (h77): appears on 0 paths
+    node 77 (h78): appears on 3 paths
 
   Paths covered by optimal but MISSED by current IDS:
-    Path 120: h17 -> h42 (length=2)
-    Path 938: h77 -> h20 (length=2)
-    Path 939: h77 -> h22 (length=2)
-    Path 1567: h13 -> h28 -> h17 (length=3)
-    Path 1623: h13 -> h28 -> h17 -> h42 (length=4)
-    Path 1687: h13 -> h28 (length=2)
-    Path 1707: h13 -> h12 -> h63 (length=3)
-    Path 1737: h13 -> h28 -> h21 (length=3)
-    Path 1776: h13 -> h28 -> h25 (length=3)
-    Path 1814: h13 -> h12 (length=2)
+    Path 273: h14 -> h59 (length=2)
+    Path 307: h15 -> h68 (length=2)
+    Path 645: h36 -> h65 -> h27 (length=3)
+    Path 651: h36 -> h65 -> h31 (length=3)
+    Path 673: h36 -> h65 (length=2)
+    Path 913: h65 -> h27 (length=2)
+    Path 914: h65 -> h31 (length=2)
+    Path 1089: h79 -> h27 (length=2)
+    Path 1090: h79 -> h31 (length=2)
+    Path 1221: h2 -> h34 (length=2)
 ======================================================================
 
 ======================================================================
   KEY FINDINGS FOR PAPER
 ======================================================================
 
-  1. Minimum cover set size: 28 of 80 nodes (35.0%)
-     Only 28 strategically placed sensors guarantee
-     coverage of ALL 2948 valid temporal attack paths.
+  1. Minimum cover set size: 31 of 80 nodes (38.8%)
+     Only 31 strategically placed sensors guarantee
+     coverage of ALL 3890 valid temporal attack paths.
 
-  2. Current IDS uses 50 sensors achieving 98.7% path coverage.
-     Optimal placement achieves 100.0% with only 28 sensors.
+  2. Current IDS uses 50 sensors achieving 99.5% path coverage.
+     Optimal placement achieves 100.0% with only 31 sensors.
 
-  3. Current placement uses 1.8x more sensors than optimal.
-     Despite using more sensors, current placement misses 1.3% of paths.
+  3. Current placement uses 1.6x more sensors than optimal.
+     Despite using more sensors, current placement misses 0.5% of paths.
 
-  4. Coverage gap: 8 nodes should be monitored but are not.
-     These 8 nodes collectively appear on 3016 path segments.
+  4. Coverage gap: 10 nodes should be monitored but are not.
+     These 10 nodes collectively appear on 1822 path segments.
      Adding sensors at these locations closes the gap entirely.
 
-  5. Excess monitoring: 30 nodes are monitored but NOT in the optimal set.
+  5. Excess monitoring: 29 nodes are monitored but NOT in the optimal set.
      These sensors could be redeployed to gap locations
      for better coverage with the same resource budget.
 
-  6. 37 of 2948 temporal attack paths (1.3%)
+  6. 20 of 3890 temporal attack paths (0.5%)
      are completely invisible to the current IDS placement.
      These represent blind attack routes exploitable by
      an adversary aware of sensor positions.
@@ -788,30 +793,30 @@ Cross-Window Vulnerability Persistence Risk
 ============================================================
 
 [1/6] Loading TAG structure and alerts...
-  OK Alerts loaded       : 128
-  OK Combined graph      : 80 nodes, 190 edges
+  OK Alerts loaded       : 127
+  OK Combined graph      : 80 nodes, 196 edges
   OK Unique hosts        : 80
   OK Temporal windows    : ['T1', 'T2', 'T3', 'T4']
 
 [2/6] Building attack sequences per source host...
   OK Sources with >= 3 alerts : 16
-  OK Total usable alerts      : 88
-     h13: 4 alerts
-     h14: 3 alerts
-     h18: 3 alerts
+  OK Total usable alerts      : 82
+     h1: 3 alerts
+     h12: 5 alerts
+     h13: 7 alerts
+     h16: 3 alerts
      h19: 4 alerts
-     h2: 27 alerts
-     h28: 3 alerts
-     h31: 3 alerts
-     h32: 3 alerts
-     h38: 3 alerts
-     h4: 13 alerts
-     h46: 3 alerts
-     h52: 4 alerts
-     h59: 3 alerts
-     h6: 4 alerts
-     h67: 4 alerts
-     h7: 4 alerts
+     h2: 14 alerts
+     h29: 3 alerts
+     h3: 3 alerts
+     h38: 4 alerts
+     h4: 7 alerts
+     h5: 8 alerts
+     h51: 3 alerts
+     h6: 5 alerts
+     h67: 7 alerts
+     h7: 3 alerts
+     h70: 3 alerts
 
   Transition matrix (temporal) : 80x80
   Transition matrix (static)  : 80x80
@@ -820,101 +825,101 @@ Cross-Window Vulnerability Persistence Risk
 
 [3/6] Running sparsity experiments...
 
-  Source: h13 (4 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
+  Source: h1 (3 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=3.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=3.00
+    sparsity=60%: exact=0.0% top3=0.0% dist=3.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=3.50
 
-  Source: h14 (3 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=1.00
-    sparsity=40%: exact=100.0% top3=100.0% dist=0.00
-    sparsity=60%: exact=40.0% top3=40.0% dist=1.00
-    sparsity=80%: exact=50.0% top3=50.0% dist=0.50
+  Source: h12 (5 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=5.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=5.00
+    sparsity=60%: exact=0.0% top3=0.0% dist=5.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=5.00
 
-  Source: h18 (3 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
+  Source: h13 (7 alerts)
+    sparsity=20%: exact=40.0% top3=40.0% dist=1.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=5.50
+    sparsity=60%: exact=10.0% top3=10.0% dist=4.50
+    sparsity=80%: exact=0.0% top3=0.0% dist=4.00
+
+  Source: h16 (3 alerts)
+    sparsity=20%: exact=40.0% top3=40.0% dist=4.00
+    sparsity=40%: exact=60.0% top3=60.0% dist=0.00
+    sparsity=60%: exact=60.0% top3=60.0% dist=0.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=4.00
 
   Source: h19 (4 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
-
-  Source: h2 (27 alerts)
-    sparsity=20%: exact=12.0% top3=16.0% dist=80.00
-    sparsity=40%: exact=22.0% top3=26.0% dist=80.00
-    sparsity=60%: exact=17.5% top3=20.0% dist=80.00
-    sparsity=80%: exact=8.6% top3=14.3% dist=80.00
-
-  Source: h28 (3 alerts)
     sparsity=20%: exact=100.0% top3=100.0% dist=0.00
     sparsity=40%: exact=100.0% top3=100.0% dist=0.00
     sparsity=60%: exact=100.0% top3=100.0% dist=0.00
     sparsity=80%: exact=100.0% top3=100.0% dist=0.00
 
-  Source: h31 (3 alerts)
-    sparsity=20%: exact=60.0% top3=60.0% dist=0.00
-    sparsity=40%: exact=20.0% top3=20.0% dist=4.00
+  Source: h2 (14 alerts)
+    sparsity=20%: exact=20.0% top3=20.0% dist=40.00
+    sparsity=40%: exact=20.0% top3=28.0% dist=5.00
+    sparsity=60%: exact=27.5% top3=32.5% dist=5.50
+    sparsity=80%: exact=14.5% top3=25.5% dist=5.00
+
+  Source: h29 (3 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=4.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=4.00
     sparsity=60%: exact=0.0% top3=0.0% dist=4.00
-    sparsity=80%: exact=50.0% top3=50.0% dist=2.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=4.00
 
-  Source: h32 (3 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=41.00
-
-  Source: h38 (3 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=1.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=2.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=1.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=41.00
-
-  Source: h4 (13 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
-
-  Source: h46 (3 alerts)
+  Source: h3 (3 alerts)
     sparsity=20%: exact=0.0% top3=0.0% dist=3.00
     sparsity=40%: exact=0.0% top3=0.0% dist=3.00
     sparsity=60%: exact=0.0% top3=0.0% dist=3.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=3.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=41.50
 
-  Source: h52 (4 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=3.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=42.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
+  Source: h38 (4 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=3.00
+    sparsity=40%: exact=20.0% top3=20.0% dist=2.00
+    sparsity=60%: exact=30.0% top3=30.0% dist=1.50
+    sparsity=80%: exact=33.3% top3=33.3% dist=2.00
 
-  Source: h59 (3 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
+  Source: h4 (7 alerts)
+    sparsity=20%: exact=0.0% top3=20.0% dist=2.00
+    sparsity=40%: exact=10.0% top3=20.0% dist=3.00
+    sparsity=60%: exact=5.0% top3=10.0% dist=4.00
+    sparsity=80%: exact=4.0% top3=4.0% dist=4.00
+
+  Source: h5 (8 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=5.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=4.00
+    sparsity=60%: exact=0.0% top3=0.0% dist=4.50
+    sparsity=80%: exact=0.0% top3=0.0% dist=4.00
+
+  Source: h51 (3 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=4.00
     sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
+    sparsity=60%: exact=0.0% top3=0.0% dist=4.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=42.00
 
-  Source: h6 (4 alerts)
+  Source: h6 (5 alerts)
     sparsity=20%: exact=0.0% top3=0.0% dist=2.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=3.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=3.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=3.00
+    sparsity=40%: exact=0.0% top3=20.0% dist=4.00
+    sparsity=60%: exact=0.0% top3=26.7% dist=2.00
+    sparsity=80%: exact=0.0% top3=25.0% dist=4.00
 
-  Source: h67 (4 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=3.50
-    sparsity=80%: exact=0.0% top3=0.0% dist=3.00
+  Source: h67 (7 alerts)
+    sparsity=20%: exact=100.0% top3=100.0% dist=0.00
+    sparsity=40%: exact=70.0% top3=70.0% dist=40.00
+    sparsity=60%: exact=90.0% top3=90.0% dist=0.00
+    sparsity=80%: exact=80.0% top3=80.0% dist=0.00
 
-  Source: h7 (4 alerts)
-    sparsity=20%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=40%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=60%: exact=0.0% top3=0.0% dist=80.00
-    sparsity=80%: exact=0.0% top3=0.0% dist=80.00
+  Source: h7 (3 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=1.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=1.00
+    sparsity=60%: exact=0.0% top3=0.0% dist=1.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=1.50
+
+  Source: h70 (3 alerts)
+    sparsity=20%: exact=0.0% top3=0.0% dist=4.00
+    sparsity=40%: exact=0.0% top3=0.0% dist=4.00
+    sparsity=60%: exact=0.0% top3=0.0% dist=4.00
+    sparsity=80%: exact=0.0% top3=0.0% dist=3.50
 
   OK Total experiment rows: 1600
 
@@ -932,58 +937,58 @@ Cross-Window Vulnerability Persistence Risk
   Method Comparison Across Sparsity Rates:
   Method             Sparsity   Exact%   Top3%    Top5%    AvgDist 
   --------------------------------------------------------------
-  TAG_Forward        20%        10.8    11.0    14.8    80.00    <
-  TAG_Forward        40%        15.1    15.4    16.6    80.00    <
-  TAG_Forward        60%        9.8     10.0    15.0    42.00    <
-  TAG_Forward        80%        13.0    13.4    13.4    60.50    <
+  TAG_Forward        20%        18.8    20.0    23.8    3.50     <
+  TAG_Forward        40%        17.5    19.9    21.3    4.00     <
+  TAG_Forward        60%        20.2    22.4    23.2    3.25     <
+  TAG_Forward        80%        14.5    16.7    19.4    4.00     <
   --------------------------------------------------------------
-  Static_TAG         20%        5.0     5.6     10.0    80.00   
-  Static_TAG         40%        3.8     4.5     6.5     80.00   
-  Static_TAG         60%        6.2     7.3     7.9     80.00   
-  Static_TAG         80%        2.1     3.6     9.8     41.00   
+  Static_TAG         20%        0.0     0.0     5.0     3.00    
+  Static_TAG         40%        0.0     0.0     4.4     3.50    
+  Static_TAG         60%        0.0     1.2     5.8     4.00    
+  Static_TAG         80%        0.0     2.1     6.8     4.50    
   --------------------------------------------------------------
-  Last_Seen          20%        15.0    0.0     0.0     80.00   
-  Last_Seen          40%        14.1    0.0     0.0     80.00   
-  Last_Seen          60%        10.1    0.0     0.0     80.00   
-  Last_Seen          80%        16.0    0.0     0.0     80.00   
+  Last_Seen          20%        17.5    0.0     0.0     4.00    
+  Last_Seen          40%        18.1    0.0     0.0     4.00    
+  Last_Seen          60%        20.8    0.0     0.0     3.75    
+  Last_Seen          80%        15.6    0.0     0.0     4.00    
   --------------------------------------------------------------
-  Most_Connected     20%        0.0     0.0     0.0     80.00   
-  Most_Connected     40%        0.0     0.0     0.0     80.00   
-  Most_Connected     60%        0.0     0.0     0.0     80.00   
-  Most_Connected     80%        0.0     0.0     0.0     80.00   
+  Most_Connected     20%        1.2     0.0     0.0     2.00    
+  Most_Connected     40%        6.2     0.0     0.0     2.00    
+  Most_Connected     60%        3.5     0.0     0.0     2.50    
+  Most_Connected     80%        3.6     0.0     0.0     2.50    
   --------------------------------------------------------------
-  Random             20%        2.1     0.0     0.0     80.00   
-  Random             40%        1.2     0.0     0.0     80.00   
-  Random             60%        3.2     0.0     0.0     80.00   
-  Random             80%        0.1     0.0     0.0     80.00   
+  Random             20%        1.2     0.0     0.0     6.00    
+  Random             40%        0.2     0.0     0.0     5.00    
+  Random             60%        1.7     0.0     0.0     5.00    
+  Random             80%        0.9     0.0     0.0     5.00    
 
   TAG Inference Degradation Curve:
   Sparsity   Exact%   Top3%    AvgDist  Graph                         
   ------------------------------------------------------------------
-  20%        10.8    11.0    80.00    ##..................
-  40%        15.1    15.4    80.00    ###.................
-  60%        9.8     10.0    42.00    #...................
-  80%        13.0    13.4    60.50    ##..................
+  20%        18.8    20.0    3.50     ###.................
+  40%        17.5    19.9    4.00     ###.................
+  60%        20.2    22.4    3.25     ####................
+  80%        14.5    16.7    4.00     ##..................
 
   Per-Source Performance at 60% Sparsity:
   Source     Exact%   Top3%    AvgDist 
   ------------------------------------
-  h13        0.0     0.0     80.00   
-  h14        40.0    40.0    1.00    
-  h18        0.0     0.0     80.00   
-  h19        0.0     0.0     80.00   
-  h2         17.5    20.0    80.00   
-  h28        100.0   100.0   0.00    
-  h31        0.0     0.0     4.00    
-  h32        0.0     0.0     80.00   
-  h38        0.0     0.0     1.00    
-  h4         0.0     0.0     80.00   
-  h46        0.0     0.0     3.00    
-  h52        0.0     0.0     42.00   
-  h59        0.0     0.0     80.00   
-  h6         0.0     0.0     3.00    
-  h67        0.0     0.0     3.50    
-  h7         0.0     0.0     80.00   
+  h1         0.0     0.0     3.00    
+  h12        0.0     0.0     5.00    
+  h13        10.0    10.0    4.50    
+  h16        60.0    60.0    0.00    
+  h19        100.0   100.0   0.00    
+  h2         27.5    32.5    5.50    
+  h29        0.0     0.0     4.00    
+  h3         0.0     0.0     3.00    
+  h38        30.0    30.0    1.50    
+  h4         5.0     10.0    4.00    
+  h5         0.0     0.0     4.50    
+  h51        0.0     0.0     4.00    
+  h6         0.0     26.7    2.00    
+  h67        90.0    90.0    0.00    
+  h7         0.0     0.0     1.00    
+  h70        0.0     0.0     4.00    
 ========================================================================
 
 ========================================================================
@@ -992,25 +997,25 @@ Cross-Window Vulnerability Persistence Risk
 
   1. At 40% alert loss, TAG-based inference provides
      probabilistic regional localization rather than exact
-     point prediction: 15.4% top-3 accuracy
-     with mean topological error of 80.00 hops.
+     point prediction: 19.9% top-3 accuracy
+     with mean topological error of 4.00 hops.
      The attack graph prior narrows the attacker to a smaller
      structural region even with substantial observation gaps.
 
   2. At 60% sparsity, TAG does not beat random on exact-match
-     accuracy (9.8% vs 3.2%).
+     accuracy (20.2% vs 1.7%).
      However, TAG reduces median topological error from
-     80.00 to 42.00 hops
-     (38.00 hops closer on average).
+     5.00 to 3.25 hops
+     (1.75 hops closer on average).
      -> The defensible contribution is topology-aware narrowing,
         not exact endpoint recovery.
 
   3. TAG inference vs Last-Seen heuristic at 60% sparsity:
-     TAG exact: 9.8%  |  Last-Seen exact: 10.1%
-     TAG dist:  42.00  |  Last-Seen dist:  80.00
+     TAG exact: 20.2%  |  Last-Seen exact: 20.8%
+     TAG dist:  3.25  |  Last-Seen dist:  3.75
      TAG is topologically closer even when not exactly right.
 
-  4. Mean belief assigned to true position: 0.0572
+  4. Mean belief assigned to true position: 0.1037
      (Random baseline: 0.0125)
      -> TAG redistributes probability mass toward the correct
         region of the graph, supporting calibrated localization.
@@ -1021,15 +1026,15 @@ Cross-Window Vulnerability Persistence Risk
      localization, not reliable exact attacker tracking.
 
   6. Evaluated on 16 independent attack sequences
-     (88 total alerts), 5 trials per sparsity rate.
+     (82 total alerts), 5 trials per sparsity rate.
      Results are averaged over 4 non-zero
      sparsity levels x 5 trials = 20 experiments per source.
 
   7. TEMPORAL ABLATION (Static vs Temporal Transition Matrix):
      At 60% sparsity:
-     Temporal TAG dist: 42.00  |  Static TAG dist: 80.00
-     Temporal TAG exact: 9.8%  |  Static TAG exact: 6.2%
-     -> Temporal weighting reduces median distance by 38.00 hops (47.5%).
+     Temporal TAG dist: 3.25  |  Static TAG dist: 4.00
+     Temporal TAG exact: 20.2%  |  Static TAG exact: 0.0%
+     -> Temporal weighting reduces median distance by 0.75 hops (18.8%).
         Stripping temporal ordering from the transition matrix
         causes belief to diffuse more uniformly, confirming that
         temporal path ordering is responsible for localization.
@@ -1045,11 +1050,11 @@ Cross-Window Vulnerability Persistence Risk
 ==========================================================
 
 [1/5] Loading data...
-  OK Raw alerts          : 128
-  OK TAG-classified pairs: 72
-  OK TAG valid           : 5
-  OK TAG impossible      : 62
-  OK TAG ambiguous       : 5
+  OK Raw alerts          : 127
+  OK TAG-classified pairs: 61
+  OK TAG valid           : 8
+  OK TAG impossible      : 49
+  OK TAG ambiguous       : 4
 
 [2/5] Running baselines...
   OK Baselines defined   : 10
@@ -1070,16 +1075,16 @@ Cross-Window Vulnerability Persistence Risk
 
   Baseline                              Corr      FCR% [95% CI]      MCR% [95% CI]      Prec [95% CI]       Rec [95% CI]        F1 [95% CI]
   -----------------------------------------------------------------------------------------------------------------------------
-  time_15min                              61  90.2 [83.1, 96.8]  60.0 [0.0, 100.0]   0.033 [0.000, 0.083]   0.400 [0.000, 1.000]   0.061 [0.000, 0.147]
-  time_30min                              61  90.2 [83.1, 96.8]  60.0 [0.0, 100.0]   0.033 [0.000, 0.083]   0.400 [0.000, 1.000]   0.061 [0.000, 0.147]
-  time_60min                              64  89.1 [81.0, 96.6]  40.0 [0.0, 100.0]   0.047 [0.000, 0.108]   0.600 [0.000, 1.000]   0.087 [0.000, 0.189]
-  time_120min                             70  87.1 [79.4, 94.3]  20.0  [0.0, 66.7]   0.057 [0.014, 0.114]   0.800 [0.333, 1.000]   0.107 [0.027, 0.203]
-  same_window                             61  90.2 [83.1, 96.8]  60.0 [0.0, 100.0]   0.033 [0.000, 0.083]   0.400 [0.000, 1.000]   0.061 [0.000, 0.147]
-  severity_gte_LOW                        72  86.1 [77.8, 93.1]   0.0   [0.0, 0.0]   0.069 [0.014, 0.139]   1.000 [1.000, 1.000]   0.130 [0.027, 0.244]
-  severity_gte_MEDIUM                     67  86.6 [77.9, 93.8]   0.0   [0.0, 0.0]   0.075 [0.015, 0.145]   1.000 [1.000, 1.000]   0.139 [0.030, 0.253]
-  severity_gte_HIGH                       36  83.3 [71.1, 93.5]  40.0 [0.0, 100.0]   0.083 [0.000, 0.188]   0.600 [0.000, 1.000]   0.146 [0.000, 0.308]
-  severity_gte_CRITICAL                    8  62.5 [25.0, 100.0]  60.0 [0.0, 100.0]   0.250 [0.000, 0.625]   0.400 [0.000, 1.000]   0.308 [0.000, 0.632]
-  static_tag_snapshot                     72  86.1 [77.8, 93.1]   0.0   [0.0, 0.0]   0.069 [0.014, 0.139]   1.000 [1.000, 1.000]   0.130 [0.027, 0.244]
+  time_15min                              48  75.0 [62.7, 86.4]   0.0   [0.0, 0.0]   0.167 [0.068, 0.277]   1.000 [1.000, 1.000]   0.286 [0.128, 0.433]
+  time_30min                              48  75.0 [62.7, 86.4]   0.0   [0.0, 0.0]   0.167 [0.068, 0.277]   1.000 [1.000, 1.000]   0.286 [0.128, 0.433]
+  time_60min                              54  77.8 [66.7, 88.2]   0.0   [0.0, 0.0]   0.148 [0.059, 0.245]   1.000 [1.000, 1.000]   0.258 [0.111, 0.394]
+  time_120min                             59  79.7 [69.0, 89.7]   0.0   [0.0, 0.0]   0.136 [0.052, 0.224]   1.000 [1.000, 1.000]   0.239 [0.098, 0.366]
+  same_window                             48  75.0 [62.7, 86.4]   0.0   [0.0, 0.0]   0.167 [0.068, 0.277]   1.000 [1.000, 1.000]   0.286 [0.128, 0.433]
+  severity_gte_LOW                        61  80.3 [70.5, 90.2]   0.0   [0.0, 0.0]   0.131 [0.049, 0.213]   1.000 [1.000, 1.000]   0.232 [0.094, 0.351]
+  severity_gte_MEDIUM                     53  81.1 [69.8, 90.7]  25.0  [0.0, 60.0]   0.113 [0.037, 0.200]   0.750 [0.400, 1.000]   0.197 [0.068, 0.324]
+  severity_gte_HIGH                       24  87.5 [72.0, 100.0] 100.0 [100.0, 100.0]   0.000 [0.000, 0.000]   0.000 [0.000, 0.000]   0.000 [0.000, 0.000]
+  severity_gte_CRITICAL                    1   0.0   [0.0, 0.0] 100.0 [100.0, 100.0]   0.000 [0.000, 0.000]   0.000 [0.000, 0.000]   0.000 [0.000, 0.000]
+  static_tag_snapshot                     56  78.6 [67.9, 88.7]   0.0   [0.0, 0.0]   0.143 [0.057, 0.241]   1.000 [1.000, 1.000]   0.250 [0.107, 0.388]
 
   FCR = False Correlation Rate: % of CORRELATED predictions TAG says are IMPOSSIBLE
   MCR = Missed Chain Rate     : % of TAG-VALID chains baseline marks NOT_CORRELATED
@@ -1090,48 +1095,48 @@ Cross-Window Vulnerability Persistence Risk
 ================================================================================
   Role                        : Structural oracle (defines ground truth)
   Reference row               : TAG_IDS (oracle/reference)
-  Valid / Impossible / Ambig   : 5 / 62 / 5
+  Valid / Impossible / Ambig   : 8 / 49 / 4
   FCR = 0.0% by construction  : (definitional guarantee, not empirical)
   MCR = 0.0% by construction  : (definitional guarantee, not empirical)
   P/R/F1                      : Not reported — TAG defines the labels,
                                 so self-evaluation is circular by definition.
-  Resolved pairs              : 67 non-ambiguous out of 72 total
-  Valid rate CI               : [1.4, 13.9]
-  Impossible rate CI          : [77.8, 93.1]
-  Ambiguous rate CI           : [1.4, 12.5]
-  Note                        : Structural oracle — not a competing method. FCR=0% and MCR=0% hold by construction (definitional guarantee). TAG resolves 93.1% of pairs; 5 ambiguous (6.9%).
+  Resolved pairs              : 57 non-ambiguous out of 61 total
+  Valid rate CI               : [4.9, 21.3]
+  Impossible rate CI          : [70.5, 90.2]
+  Ambiguous rate CI           : [1.6, 13.1]
+  Note                        : Structural oracle — not a competing method. FCR=0% and MCR=0% hold by construction (definitional guarantee). TAG resolves 93.4% of pairs; 4 ambiguous (6.6%).
 ================================================================================
 
 ================================================================================
   KEY FINDINGS
 ================================================================================
 
-  1. Of 72 consecutive alert pairs, only 5 (6.9% [1.4, 13.9])
+  1. Of 61 consecutive alert pairs, only 8 (13.1% [4.9, 21.3])
      are structurally valid attack chains according to the TAG.
      (Valid chain rates vary with topology density; in this hub-and-spoke
       configuration with ~30-50% host retention, only a minority
       of consecutive pairs correspond to feasible attack progressions.)
 
-  2. 62 pairs (86.1% [77.8, 93.1]) are structurally IMPOSSIBLE -
+  2. 49 pairs (80.3% [70.5, 90.2]) are structurally IMPOSSIBLE -
      a standard correlator would incorrectly link these.
 
-  3. 5 pairs (6.9% [1.4, 12.5]) are ambiguous (path exists
+  3. 4 pairs (6.6% [1.6, 13.1]) are ambiguous (path exists
      but temporal ordering violated - potential detection lag).
 
-  4. Lowest-FCR baseline: severity_gte_HIGH
-     FCR=~83% [71, 94]  MCR=~40% [0, 100]  F1=0.146 [0.000, 0.308]
+  4. Lowest-FCR baseline: time_15min
+     FCR=~75% [63, 86]  MCR=~0% [0, 0]  F1=0.286 [0.128, 0.433]
 
   5. TAG-IDS achieves FCR=0% as a definitional guarantee of the temporal
      reachability check — any pair classified VALID is structurally feasible
      by construction. In this configuration, the lowest-FCR independent
-     baseline achieves ~83%.
+     baseline achieves ~75%.
      (NOTE: This floor varies across network sizes and topologies.
      For the paper, cite the cross-run aggregate range, not this
      single-configuration number.)
-     TAG-IDS additionally identifies 5 ambiguous cases as a third
+     TAG-IDS additionally identifies 4 ambiguous cases as a third
      class that no baseline can distinguish.
 
-  STATISTICAL NOTE: 72 consecutive pairs yield 67
+  STATISTICAL NOTE: 61 consecutive pairs yield 57
   non-ambiguous samples. Several baseline CIs span 30+ percentage points,
   reflecting the small sample size. Cross-run replication across 9 network
   sizes (20-100 hosts) confirms directional consistency of these findings.
@@ -1140,15 +1145,15 @@ Cross-Window Vulnerability Persistence Risk
 ========================================================================
   CONSOLIDATED OUTPUT SUMMARY
 ========================================================================
-  - Alert chains: total_pairs=72 valid=5 impossible=62 ambiguous=5
-  - Blind spots: avg_blind_spot_ratio=50.6% avg_coverage=49.4%
-  - Triage: total_alerts=128 promoted=32 demoted=79
-  - Persistence: top_pair=max_span vs avg_degree r=0.01 p=0.9298
-  - Chronic risk: nodes=11
-  - CVE Lifecycle: avg_danger_window=1.93 surface_reduction=54.5% unpatched=45 peak_window=T2
-  - Min Coverage: optimal_size=28 current_size=50 optimal_cov=100.0% current_cov=98.7% gap_nodes=8
-  - Baselines: lowest-FCR=severity_gte_HIGH F1=0.146 FCR=83.3% MCR=40.0%
-  - Attacker progress: experiments=1600 tag_exact@60%=0.0984 tag_top3@60%=0.1 tag_dist@60%=42.0 rand_exact@60%=0.032 rand_dist@60%=80.0
+  - Alert chains: total_pairs=61 valid=8 impossible=49 ambiguous=4
+  - Blind spots: avg_blind_spot_ratio=52.8% avg_coverage=47.2%
+  - Triage: total_alerts=127 promoted=29 demoted=86
+  - Persistence: top_pair=max_span vs path_critical r=0.134 p=0.2358
+  - Chronic risk: nodes=8
+  - CVE Lifecycle: avg_danger_window=1.88 surface_reduction=59.1% unpatched=42 peak_window=T2
+  - Min Coverage: optimal_size=31 current_size=50 optimal_cov=100.0% current_cov=99.5% gap_nodes=10
+  - Baselines: lowest-FCR=time_15min F1=0.286 FCR=75.0% MCR=0.0%
+  - Attacker progress: experiments=1600 tag_exact@60%=0.2016 tag_top3@60%=0.2245 tag_dist@60%=3.25 rand_exact@60%=0.0167 rand_dist@60%=5.0
 ========================================================================
 
 ========================================================================
@@ -1156,20 +1161,20 @@ Cross-Window Vulnerability Persistence Risk
 ========================================================================
 
   Idea 3 — Alert Chain Correlation (Quantitative Ablation):
-    Static TAG snapshot FCR  : 86.1%
+    Static TAG snapshot FCR  : 78.6%
     Temporal TAG-IDS FCR     : 0.0%
-    Ablation gap             : 86.1 percentage points
+    Ablation gap             : 78.6 percentage points
     -> Collapsing all observation windows into a single merged
        graph eliminates temporal path ordering, causing the
-       static correlator to accept 86.1% false chains.
+       static correlator to accept 78.6% false chains.
 
   Exploratory Analysis — Attacker Progress (Quantitative Ablation):
-    Temporal TAG median dist (60% sparsity)  : 42.00
-    Static TAG median dist (60% sparsity)    : 80.00
-    Distance improvement                   : 38.00 hops
-    Temporal TAG exact match : 9.8%
-    Static TAG exact match   : 6.2%
-    -> Temporal weighting reduces median distance by 38.00 hops (47.5%).
+    Temporal TAG median dist (60% sparsity)  : 3.25
+    Static TAG median dist (60% sparsity)    : 4.00
+    Distance improvement                   : 0.75 hops
+    Temporal TAG exact match : 20.2%
+    Static TAG exact match   : 0.0%
+    -> Temporal weighting reduces median distance by 0.75 hops (18.8%).
        Stripping temporal ordering causes belief to diffuse more uniformly.
     (Note: While median captures central tendency, in some runs, up to 40% of sources
      experience complete localization failure, hitting the N-host ceiling. Note that some
@@ -1205,7 +1210,7 @@ Cross-Window Vulnerability Persistence Risk
   "The static TAG snapshot baseline in P1 directly quantifies the
    temporal contribution: collapsing all four observation windows
    into a single merged graph raises the false correlation rate
-   from 0% to 86.1% — equivalent to the best time-proximity
+   from 0% to 78.6% — equivalent to the best time-proximity
    baseline — confirming that temporal path ordering rather than
    graph structure alone is responsible for false correlation
    elimination. For P2 through P7, the static model's limitation

@@ -1,2 +1,2 @@
 total_cve_host_pairs,full_lifecycle_count,exploited_unpatched_count,never_exploited_count,avg_danger_window,max_danger_window,avg_surface_reduction_pct,peak_exploit_window,total_reachability_changes
-31,20,11,0,1.79,3,49.0,T2,17
+143,94,48,1,1.82,3,68.2,T2,109
