@@ -51,27 +51,42 @@ plt.close()
 print("Figure 5 successfully rebuilt!")
 
 # ---------------------------------------------------------
-# 2. Rebuild Figure 4 (BSR Trend with explicit data point labels)
+# 2. Rebuild Figure 4 (BSR Trend with Time Window X-axis)
+# Exact per-window values:
+# n=20: [37.5%, 33.3%, 42.9%, 33.3%] -> Mean = 36.75% -> 36.8% (Matches Table 2)
+# n=30: [35.7%, 30.0%, 33.3%, 36.4%] -> Mean = 33.85% -> 33.9% (Matches Table 2)
+# n=40: [38.9%, 37.5%, 44.4%, 45.0%] -> Mean = 41.45% -> 41.5% (Matches Table 2)
 # ---------------------------------------------------------
 windows = ['w0', 'w1', 'w2', 'w3']
 bsr_20 = [37.5, 33.3, 42.9, 33.3]
 bsr_30 = [35.7, 30.0, 33.3, 36.4]
 bsr_40 = [38.9, 37.5, 44.4, 45.0]
 
-plt.figure(figsize=(6.5, 4.8), dpi=300)
-plt.plot(windows, bsr_20, marker='s', linewidth=2, color='#1f77b4', label='n = 20 hosts')
-plt.plot(windows, bsr_30, marker='^', linewidth=2, linestyle='--', color='#e74c3c', label='n = 30 hosts')
-plt.plot(windows, bsr_40, marker='D', linewidth=2, linestyle='-.', color='#2ca02c', label='n = 40 hosts')
+plt.figure(figsize=(6.8, 5.0), dpi=300)
+plt.plot(windows, bsr_20, marker='s', linewidth=2, color='#1f77b4', label='n = 20 hosts (Mean 36.8%)')
+plt.plot(windows, bsr_30, marker='^', linewidth=2, linestyle='--', color='#e74c3c', label='n = 30 hosts (Mean 33.9%)')
+plt.plot(windows, bsr_40, marker='D', linewidth=2, linestyle='-.', color='#2ca02c', label='n = 40 hosts (Mean 41.5%)')
 
-# Add data labels on points for explicit numerical legibility
+# Y offsets tailored per point to prevent cross-series label confusion
+# n=20 labels (blue squares)
+y_offset_20 = [-1.4, -1.4, -1.4, -1.4]
 for i, txt in enumerate(bsr_20):
-    plt.text(i, txt - 1.2, f'{txt:.1f}%', color='#1f77b4', fontsize=8, ha='center', fontweight='bold')
-for i, txt in enumerate(bsr_30):
-    plt.text(i, txt - 1.2 if i != 1 else txt + 0.8, f'{txt:.1f}%', color='#e74c3c', fontsize=8, ha='center', fontweight='bold')
-for i, txt in enumerate(bsr_40):
-    plt.text(i, txt + 0.8, f'{txt:.1f}%', color='#2ca02c', fontsize=8, ha='center', fontweight='bold')
+    plt.text(i, txt + y_offset_20[i], f'{txt:.1f}%', color='#1f77b4', fontsize=8.5, ha='center', fontweight='bold',
+             bbox=dict(boxstyle='round,pad=0.15', facecolor='white', edgecolor='none', alpha=0.85))
 
-plt.xlabel('Observation Window', fontsize=11, fontweight='bold')
+# n=30 labels (red triangles)
+y_offset_30 = [-1.4, 0.8, -1.4, 0.9]
+for i, txt in enumerate(bsr_30):
+    plt.text(i, txt + y_offset_30[i], f'{txt:.1f}%', color='#e74c3c', fontsize=8.5, ha='center', fontweight='bold',
+             bbox=dict(boxstyle='round,pad=0.15', facecolor='white', edgecolor='none', alpha=0.85))
+
+# n=40 labels (green diamonds)
+y_offset_40 = [0.9, 0.9, 0.9, 0.9]
+for i, txt in enumerate(bsr_40):
+    plt.text(i, txt + y_offset_40[i], f'{txt:.1f}%', color='#2ca02c', fontsize=8.5, ha='center', fontweight='bold',
+             bbox=dict(boxstyle='round,pad=0.15', facecolor='white', edgecolor='none', alpha=0.85))
+
+plt.xlabel('Time Window', fontsize=11, fontweight='bold')
 plt.ylabel('Blind Spot Ratio (BSR %)', fontsize=11, fontweight='bold')
 plt.ylim(24, 48)
 plt.legend(frameon=True, loc='upper left', fontsize=9)
@@ -80,7 +95,7 @@ plt.tight_layout()
 
 plt.savefig('Figures/fig4_bsr_trend.png', dpi=300)
 plt.close()
-print("Figure 4 successfully rebuilt with explicit data point labels!")
+print("Figure 4 successfully rebuilt with 'Time Window' label!")
 
 # ---------------------------------------------------------
 # 3. Rebuild Figure 3 (STS Scatter Plot, matching original style exactly)
