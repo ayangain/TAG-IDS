@@ -23,7 +23,7 @@ sorted_items = sorted(fcr_data.items(), key=lambda x: x[1])
 labels = [item[0] for item in sorted_items]
 values = [item[1] for item in sorted_items]
 
-labels = ['TAG-IDS (Oracle)'] + labels
+labels = ['TAG-IDS'] + labels
 values = [0.0] + values
 
 plt.figure(figsize=(8, 5.5), dpi=300)
@@ -33,7 +33,7 @@ bars = plt.barh(labels, values, color=colors, edgecolor='black', linewidth=0.8)
 for i, bar in enumerate(bars):
     if i == 0:
         bar.set_hatch('///')
-        plt.text(1.5, bar.get_y() + bar.get_height()/2.0, '0.0% (by construction)', 
+        plt.text(1.5, bar.get_y() + bar.get_height()/2.0, '0.0% (by design)', 
                  va='center', ha='left', fontweight='bold', color='#1f77b4', fontsize=10)
     else:
         val = values[i]

@@ -31,6 +31,9 @@
 
 \begin{document}
 \mainmatter              % start of a contribution
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
 %
 \title{Temporal Attack Graphs for Context Aware Intrusion Detection}
 %
@@ -48,27 +51,27 @@
 \maketitle              % typeset the title of the contribution
 
 \begin{abstract}
-Security Operations Centers routinely rely on simple correlation rules, such as time-proximity and static severity scores, that ignore network topology, leading to high false correlation rates and inefficient incident response. While static attack graphs map structural exploit paths, they assume constant network visibility and ignore the chronological order of lateral movement. We present TAG-IDS, a context-aware intrusion detection framework that embeds time directly into the attack graph topology, acting as a structural reachability oracle for alert correlation. TAG-IDS distinguishes between structurally valid, temporally ambiguous, and physically impossible alert chains. We evaluate TAG-IDS on simulated enterprise networks across three configurations (20, 30, and 40 hosts). No time- or severity-based baseline achieves a False Correlation Rate (FCR) below 42.3\% (mean 57.9\%, range 42.3\%--70.3\%), whereas TAG-IDS achieves 0\% FCR by construction as a structural reachability oracle over the modeled attack surface. An ablation study shows that collapsing temporal ordering into a static snapshot yields an FCR of 58.7\% (range 43.4\%--71.0\%), proving that temporal path ordering, not just static graph structure, eliminates false correlation. Standard CVSS severity explains only $\sim$4.3\% of a node's true structural risk, highlighting the need for context-aware structural triage.
+Security Operations Centers routinely rely on simple correlation rules, such as time-proximity and static severity scores, that ignore network topology. This leads to high false correlation rates and inefficient incident response. While static attack graphs map structural exploit paths, they assume constant network visibility and ignore the chronological order of lateral movement. We present TAG-IDS, a context-aware intrusion detection system that uses temporal attack graphs to serve as an exact structural validator for alert correlation. TAG-IDS distinguishes between structurally valid, temporally ambiguous, and physically impossible alert chains. Evaluation on enterprise network simulations shows that conventional time- and severity-based correlators falsely link a substantial portion of physically impossible alert pairs, whereas TAG-IDS eliminates false correlations by design by strictly enforcing network reachability over the modeled attack surface. Our baseline evaluation confirms that temporal path ordering, rather than static graph structure alone, is essential for eliminating false correlations, while nominal severity scores fail to reflect true structural risk.
 
-\keywords{Dynamic Networks, Temporal Attack Graph, Intrusion Detection, Alert Correlation, Security Metrics}
+\keywords{Dynamic Networks, Temporal Attack Graphs, Intrusion Detection, Alert Correlation, Security Metrics}
 \end{abstract}
 %
 \section{Introduction}
 
-Modern Security Operations Centers (SOCs) receive thousands of daily alerts from intrusion detection systems (IDSs) and SIEM platforms, causing severe analyst fatigue. To manage this volume, correlators rely on sliding time windows, event grouping, and static severity scores \cite{10.1145/586110.586144,1366134,s22041494}. However, time-based correlation ignores network structure: alerts occurring close together in time on unrelated hosts are falsely linked, while multi-stage attack campaigns spanning longer periods get fragmented and missed.
+Modern Security Operations Centers (SOCs) receive thousands of daily alerts from intrusion detection systems (IDSs) and SIEM platforms, causing severe analyst fatigue. To manage this volume, correlators rely on sliding time windows, event grouping, and static severity scores \cite{10.1145/586110.586144,1366134,s22041494}. However, time-based correlation ignores network structure. Alerts occurring close together in time on unrelated hosts are falsely linked, while multi-stage attack campaigns extending over longer periods get fragmented and missed.
 
 At the same time, enterprise networks evolve rapidly. Cloud orchestration, containerization, and continuous patching cause host availability and firewall policies to change constantly. While Attack Graphs (AGs) enumerate multi-step exploit paths \cite{1004377,Albanese2011,6263942}, traditional AG models evaluate security posture over a single static snapshot, failing to capture the chronological sequence of lateral movement. Although dynamic systems research provides theoretical foundations for time-varying graphs \cite{Casteigts2012,Holme}, practical security metrics capable of validating real-time alert reachability over evolving topologies remain absent.
 
-To address these challenges, we present \textbf{TAG-IDS}, an operational framework that uses Temporal Attack Graphs (TAGs) \cite{Gain2023} as a structural reachability oracle for alert correlation, triage, and coverage assessment.
+To address these challenges, we present \textbf{TAG-IDS}, an operational system that uses Temporal Attack Graphs (TAGs) \cite{Gain2023} as an exact reachability checker for alert correlation, triage, and coverage assessment.
 
-The primary contributions of this paper are: (1)~\textbf{Temporal Alert Chain Validation (TACV)}, a reachability validator classifying candidate alert pairs into \emph{Valid}, \emph{Impossible}, and \emph{Ambiguous} chains, achieving 0\% FCR by construction as a structural reachability oracle, (2)~\textbf{Structural Triage Score (STS)}, a graph-theoretic alert prioritization metric combining temporal betweenness centrality, path criticality, and cross-window persistence, demonstrating that nominal severity explains only $\sim$4.3\% of structural risk, (3)~\textbf{Temporal Blind Spot Quantification (TBSQ)}, a coverage framework quantifying unmonitored attack-path bottlenecks across evolving windows to prioritize sensor placement, and (4)~\textbf{Empirical Evaluation}, validating TAG-IDS across 20, 30, and 40 host configurations to demonstrate a mean 57.9\% baseline FCR floor.
+The primary contributions of this paper are (1)~\textbf{Temporal Alert Chain Validation (TACV)}, a reachability validator classifying candidate alert pairs into \emph{Valid}, \emph{Impossible}, and \emph{Ambiguous} chains, achieving 0\% FCR by design by verifying physical path feasibility, (2)~\textbf{Structural Triage Score (STS)}, a graph-theoretic alert prioritization metric combining temporal betweenness centrality, path criticality, and cross-window persistence, demonstrating that nominal severity explains only $\sim$4.3\% of structural risk, (3)~\textbf{Temporal Blind Spot Quantification (TBSQ)}, a coverage model quantifying unmonitored attack-path bottlenecks across evolving windows to prioritize sensor placement, and (4)~\textbf{Empirical Evaluation}, validating TAG-IDS across 20, 30, and 40 host configurations to demonstrate a mean 57.9\% baseline FCR floor.
 
-This paper is organized as follows: Section~\ref{sec:related-work} reviews related work. Section~\ref{sec:model} formalizes the TAG-IDS framework. Section~\ref{sec:setup} describes the experimental setup. Section~\ref{sec:evaluation} presents empirical results. Section~\ref{sec:limitations} discusses limitations. Section~\ref{sec:conclusion} concludes the paper, followed by Section~\ref{sec:future-work} on future work.
+This paper is organized as follows. Section~\ref{sec:related-work} reviews related work. Section~\ref{sec:model} formalizes the TAG-IDS architecture. Section~\ref{sec:setup} describes the evaluation setup. Section~\ref{sec:evaluation} presents empirical results. Section~\ref{sec:limitations} discusses limitations. Section~\ref{sec:conclusion} concludes the paper, followed by Section~\ref{sec:future-work} on future work.
 
 \section{Related Work}\label{sec:related-work}
 
 \subsection{Alert Correlation and Context-Aware Intrusion Detection}
-IDSs traditionally evaluate network or host events in isolation. To mitigate false positives, context-aware systems incorporate host assets, user behaviors, and temporal co-occurrence \cite{Aleroud2017,Kazeminajafabadi2023,Lee2023,Saint-Hilaire2024,Yan2023}. Dominant correlation techniques in production SIEM platforms rely on sliding time windows, event aggregation, and prerequisite--consequence rule matching \cite{10.1145/586110.586144,1366134,s22041494}. However, time-proximity correlation cannot verify structural reachability: alerts occurring closely in time may belong to unrelated attacks, whereas multi-stage campaigns spanning longer intervals may be missed. Dynamic enterprise changes such as cloud orchestration, containerization, and patch churn render time-proximity heuristics prone to false correlations.
+Early alert correlation research focused on reducing raw event volume using statistical clustering and sliding time windows \cite{10.1145/586110.586144,1366134,s22041494}. To improve accuracy, context-aware approaches incorporated host asset values, user behavior profiles, and vulnerability threat feeds \cite{Aleroud2017,Kazeminajafabadi2023,Lee2023,Saint-Hilaire2024,Yan2023}. Subsequent systems introduced prerequisite--consequence rule matching to link security events sharing explicit attack signatures. However, rule-based systems evaluate alerts against fixed databases rather than verifying live topological reachability. When network configurations shift due to patching or host churn, static rules fail to track active exploit paths, causing false correlations.
 
 \subsection{Static and Temporal Attack Graphs}\label{sec:TAG}
 Attack graphs model vulnerability dependencies and reachability \cite{1004377,10.1145/586110.586140,mulval,6263942}. Attack graph-based IDS models project incoming alerts onto exploit nodes to validate multi-step paths \cite{Roschke2010,Angelini2019,Capobianco2020,Sen2022}. Traditional models assume a static snapshot, misclassifying decommissioned or newly provisioned hosts. To capture dynamic attack surfaces, Temporal Attack Graphs (TAGs) model network evolution across discrete time windows \cite{ENOCH2019102448,abs-1906-10922,Gain2023}.
@@ -86,7 +89,7 @@ A Temporal Attack Graph $\mathcal{G}^a(t_{\min}, t_{\max})$ over observation per
 \end{itemize}
 \end{definition}
 
-We assume that system parameters are sampled and the corresponding attack graphs are generated at the beginning of each time window, i.e., in time instances $t_0, t_1, \ldots, t_{\tau-1}$ for windows $w_0, w_1, \ldots, w_{\tau-1}$, where $t_0 = t_{\min}$ and $t_{\tau} = t_{\max}$ and $t_i = t_{\min}+w\times i$, for $0 \le i < \tau$. While prior TAG literature~\cite{ENOCH2019102448,Gain2023} focuses on offline security metrics rather than operational alert streams, TAG-IDS extends this model for real-time intrusion detection.
+We assume that system parameters are sampled and the corresponding attack graphs are generated at the beginning of each time window, i.e., in time instances $t_0, t_1, \ldots, t_{\tau-1}$ for windows $w_0, w_1, \ldots, w_{\tau-1}$, where $t_0 = t_{\min}$ and $t_{\tau} = t_{\max}$ and $t_i = t_{\min}+w\times i$, for $0 \le i < \tau$. While prior TAG literature~\cite{ENOCH2019102448,Gain2023} focuses on static security metrics rather than operational alert streams, TAG-IDS extends this model for real-time intrusion detection.
 
 \subsection{Graph Neural Networks and Research Positioning}
 Graph Neural Networks (e.g., E-GraphSAGE, GCNs) model relational communication patterns for detection \cite{Friji2023,Bilot2023,Sun2024,Zhong2024}. While GNNs improve detection accuracy over flat feature vectors, they infer alert relationships statistically from history rather than verifying security semantics, exploit prerequisites, or active firewall rules. Table~\ref{tab:gap-comparison} summarizes TAG-IDS's positioning across validation, triage, and coverage modules.
@@ -98,38 +101,38 @@ Graph Neural Networks (e.g., E-GraphSAGE, GCNs) model relational communication p
 \footnotesize
 \begin{tabularx}{\textwidth}{@{} l *{5}{>{\centering\arraybackslash}X} @{}}
 \toprule
-\textbf{Framework Category} & \textbf{Graph} & \textbf{Evolving} & \textbf{Alert} & \textbf{Alert} & \textbf{Coverage} \\
+\textbf{System Category} & \textbf{Graph} & \textbf{Evolving} & \textbf{Alert} & \textbf{Alert} & \textbf{Coverage} \\
  & \textbf{Reasoning} & \textbf{Network} & \textbf{Validation} & \textbf{Triage} & \textbf{Gaps} \\
 \midrule
 SIEM Heuristics \cite{1366134,s22041494} & No & No & No & No (CVSS) & No \\
 Static AG-IDS \cite{Roschke2010,Angelini2019} & Yes & No & Yes (Static) & Partial (Static) & No \\
 Temporal AGs \cite{ENOCH2019102448,Gain2023} & Yes & Yes & No (No IDS) & No & No \\
-GNN-based IDS \cite{Friji2023,Sun2024} & Yes & Partial & No (Stat.) & No & No \\
+GNN-based IDS \cite{Friji2023,Sun2024} & Yes & Partial & No (Statistical) & No & No \\
 \midrule
-\textbf{TAG-IDS (Proposed)} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes (Dyn.)} & \textbf{Yes (Dyn.)} & \textbf{Yes (Dyn.)} \\
+\textbf{TAG-IDS (Proposed)} & \textbf{Yes} & \textbf{Yes} & \textbf{Yes (Dynamic)} & \textbf{Yes (Dynamic)} & \textbf{Yes (Dynamic)} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Proposed TAG-IDS Framework}
+\section{Proposed TAG-IDS Architecture}
 \label{sec:model}
 
-This section presents TAG-IDS, a context-aware intrusion analysis framework that combines Temporal Attack Graphs (TAGs) with Intrusion Detection System (IDS) alert streams to enable temporally consistent structural reasoning. Unlike traditional IDSs that process alerts in isolation, TAG-IDS acts as a post-detection analysis layer. It validates, prioritizes, and enriches IDS alerts using the dynamic attack surface of the monitored network.
+TAG-IDS is a context-aware intrusion analysis system that combines Temporal Attack Graphs (TAGs) with Intrusion Detection System (IDS) alert streams to enable temporally consistent structural reasoning. Unlike traditional IDSs that process alerts in isolation, TAG-IDS acts as a post-detection analysis layer. It validates, prioritizes, and enriches IDS alerts using the dynamic attack surface of the monitored network.
 
 Figure \ref{fig:architecture} shows the overall architecture. TAG-IDS consists of three main phases: (i) Temporal Attack Graph generation, (ii) structural analysis of IDS alerts, and (iii) security analytics for analyst decision support. Each phase provides complementary insights that improve intrusion analysis without requiring changes to the underlying IDS.
 \begin{figure}[ht!]
 \centering
-\vspace{-0.4em}
-\includegraphics[width=0.78\textwidth]{Figures/TAG-IDS.png}
-\vspace{-0.4em}
-\caption{TAG-IDS system architecture. Phase 1 ingests infrastructure data and IDS alerts to construct the Temporal Attack Graph across time windows $w_0, w_1, w_2, w_3$. Phase 2 applies three analytical modules (TACV, STS, TBSQ) over the TAG. Phase 3 delivers validated attack chains, prioritized alert rankings, and temporal coverage metrics to the analyst.}
+\vspace{-0.5em}
+\includegraphics[width=0.70\textwidth]{Figures/TAG-IDS.png}
+\vspace{-0.5em}
+\caption{TAG-IDS system architecture. Phase 1 ingests infrastructure data and IDS alerts to construct the Temporal Attack Graph across time windows $w_0, w_1, w_2, \ldots, w_n$. Phase 2 applies three analytical modules (TACV, STS, TBSQ) over the TAG. Phase 3 delivers validated attack chains, prioritized alert rankings, and temporal coverage metrics to the analyst.}
 \label{fig:architecture}
 \vspace{-0.4em}
 \end{figure}
 
 \subsection{System Overview}
 
-TAG-IDS ingests infrastructure state (host inventories, network topology, vulnerability scans, firewall rules) and IDS security alerts. For each window, MulVAL~\cite{mulval} constructs an attack graph represented within the TAG model of \cite{Gain2023}. IDS alerts are normalized into $(t, s, d, \tau, \sigma)$ tuples recording timestamp, source, destination, category, and severity. TAG-IDS projects alerts onto the TAG by occurrence time to evaluate reachability over the active attack graph. Three analytical modules operate on these mapped alerts: \textbf{TACV} validates candidate alert chains, \textbf{STS} ranks validated alerts by structural centrality, and \textbf{TBSQ} identifies monitoring blind spots.
+TAG-IDS ingests infrastructure state (host inventories, network topology, vulnerability scans, firewall rules) and IDS security alerts. While any standard attack graph generation tool can be integrated, our implementation uses MulVAL~\cite{mulval} to construct the initial dependency graphs. Because fine-grained condition and rule nodes are unnecessary for path-level reachability analysis, TAG-IDS prunes intermediate dependency nodes, collapsing each snapshot into a host-level attack graph within the TAG model of \cite{Gain2023}. IDS alerts are normalized into $(t, s, d, \tau, \sigma)$ tuples recording timestamp, source, destination, category, and severity. TAG-IDS projects alerts onto the TAG by occurrence time to evaluate reachability over the active attack graph. Three analytical modules operate on these mapped alerts: \textbf{TACV} validates candidate alert chains, \textbf{STS} ranks validated alerts by structural centrality, and \textbf{TBSQ} identifies monitoring blind spots.
 
 
 
@@ -137,16 +140,16 @@ TAG-IDS ingests infrastructure state (host inventories, network topology, vulner
 \subsection{Temporal Alert Chain Validation (TACV)}
 \label{sec:tacv}
 
-Conventional correlation techniques assume that alerts occurring within a short time window, or matching fixed rule patterns, belong to the same attack campaign. While this reduces alert volume, it cannot verify whether an attacker could actually traverse the network between those stages. As a result, unrelated alerts get falsely linked, while multi-stage attacks spanning longer timeframes get fragmented. TACV resolves this by validating candidate correlations directly against the TAG across the specific time windows where each alert occurred, ensuring every decision reflects actual network reachability at that time.
+Conventional correlation techniques assume that alerts occurring within a short time window, or matching fixed rule patterns, belong to the same attack campaign. While this reduces alert volume, it cannot verify whether an attacker could actually traverse the network between those stages. As a result, unrelated alerts get falsely linked, while multi-stage attacks extending over longer timeframes get fragmented. TACV resolves this by validating candidate correlations directly against the TAG across the specific time windows where each alert occurred, ensuring every decision reflects actual network reachability at that time.
 
 \subsubsection{Problem Definition}
-Let $A = \{a_1, \ldots, a_n\}$ be the ordered set of IDS alerts generated during the monitoring period, where each alert $a_i = (t_i, s_i, d_i, \tau_i, \sigma_i)$ records a timestamp $t_i$, source host $s_i$, destination host $d_i$, attack category $\tau_i$, and severity $\sigma_i$. For a candidate pair $(a_i, a_j)$, TACV determines whether an attacker could actually traverse the evolving attack surface from $d_i$ to $s_j$ through a valid attack path in the TAG, rather than relying on the proxy test $|t_j - t_i| < \Delta$ used by conventional correlators.
+Let $A = \{a_1, \ldots, a_n\}$ be the ordered set of IDS alerts generated during the monitoring period, where each alert $a_i = (t_i, s_i, d_i, \tau_i, \sigma_i)$ records a timestamp $t_i$, source host $s_i$, destination host $d_i$, attack category $\tau_i$, and severity $\sigma_i$. For a candidate pair $(a_i, a_j)$, TACV determines whether an attacker could actually traverse the evolving attack surface from $d_i$ to $s_j$ through a valid attack path in the TAG, rather than relying solely on time-proximity proxy tests ($0 < t_j - t_i \le \Delta$, where $\Delta$ is the maximum time-window threshold) used by conventional correlators.
 
 \subsubsection{Candidate Pair Generation}
-To bound computational cost, TACV, as shown in Figure~\ref{fig:tag-example}, first restricts attention to pairs within a configurable temporal threshold $P = \{(a_i, a_j) \mid 0 < t_j - t_i \le \Delta\}$. This threshold reduces the candidate set for efficiency only, as correlation is decided entirely by the structural validation step below.
+To bound computational cost, TACV first filters alert pairs using a configurable maximum time-window threshold $\Delta$ (the maximum allowable time separation between candidate alerts, e.g., $\Delta = 120$\,minutes), defining the candidate pair set $P = \{(a_i, a_j) \mid 0 < t_j - t_i \le \Delta\}$. This threshold serves purely as a search-space pre-filter for candidate pair generation, while correlation is decided entirely by the structural reachability validation step below.
 
 \subsubsection{Temporal Structural Validation}
-For a candidate pair $(a_i, a_j)$ with $t_i \in w_p$ and $t_j \in w_q$, TACV identifies the corresponding attack graphs $G_p^a$ and $G_q^a$. If $p = q$, validation proceeds directly within $G_p^a$. Otherwise, TACV evaluates path existence across the sequence of intermediate windows $G_p^a, G_{p+1}^a, \ldots, G_q^a$. The pair is structurally feasible if there exists a path $\pi = (v_1, \ldots, v_k)$ originating at $d_i$, terminating at $s_j$, and remaining temporally valid throughout the intermediate windows, i.e., $\pi \subseteq \bigcup_{r=p}^{q} G_r^a$. Path existence is determined via graph traversal (using Neo4j in our implementation\footnote{Neo4j: https://neo4j.com/}). 
+For a candidate pair $(a_i, a_j)$ with $t_i \in w_p$ and $t_j \in w_q$, TACV identifies the corresponding attack graphs $G_p^a$ and $G_q^a$. If $p = q$, validation proceeds directly within $G_p^a$. Otherwise, TACV evaluates path existence across the sequence of intermediate windows $G_p^a, G_{p+1}^a, \ldots, G_q^a$. The pair is structurally feasible if there exists a path $\pi = (v_1, \ldots, v_k)$ originating at the target host $d_i$ (destination of alert $a_i$), terminating at host $s_j$ (source of alert $a_j$), and remaining temporally valid throughout the intermediate windows, i.e., $\pi \subseteq \bigcup_{r=p}^{q} G_r^a$. Path existence is determined via graph traversal (using Neo4j in our implementation\footnote{Neo4j: https://neo4j.com/}). 
 
 \subsubsection{Alert Chain Classification}
 Each candidate pair is assigned one of three labels, as illustrated in the worked example of Figure~\ref{fig:tag-example}:
@@ -158,9 +161,9 @@ Each candidate pair is assigned one of three labels, as illustrated in the worke
 
 \begin{figure}[ht!]
 \centering
-\vspace{-0.4em}
-\includegraphics[width=0.75\textwidth]{Figures/fig2_tag_example.png}
-\vspace{-0.4em}
+\vspace{-0.5em}
+\includegraphics[width=0.80\textwidth]{Figures/fig2_tag_example.png}
+\vspace{-0.5em}
 \caption{Worked example of TACV alert chain classification across time windows. The $a_1 \to a_2$ chain is \emph{Valid} via a reachable temporal path. The $a_2 \to a_4$ chain is \emph{Impossible} because intermediate host $H_3$ (marked Unavailable in window $w_1$) was decommissioned/patched. The $a_5 \to a_6$ chain is \emph{Ambiguous} because a structural path exists but alert timestamps reflect detection lag ($t_6 < t_5$).}
 \label{fig:tag-example}
 \vspace{-0.4em}
@@ -172,7 +175,7 @@ Each candidate pair is assigned one of three labels, as illustrated in the worke
 TACV determines whether alerts correspond to feasible attack progressions, but not their relative operational importance. Security operations centers routinely receive far more validated alerts than analysts can investigate with equal priority, and conventional severity scores such as CVSS, IDS confidence, or vendor threat levels reflect the intrinsic impact of a vulnerability or signature independent of its structural role in the current attack surface. STS addresses this by scoring each validated alert using graph-theoretic properties of the TAG in the time window in which it occurs, rather than by severity alone.
 
 \subsubsection{Structural Components}
-Let alert $a_i$ map to node $v_i \in V_t$ in window $t$. We compute three structural quantities, each normalized to $[0,1]$: \emph{Temporal Betweenness Centrality} $BC_i$, the fraction of feasible attack paths in $G_t^a$ passing through $v_i$, capturing how strongly the node mediates attacker movement, \emph{Path-Critical Indicator} $PC_i$, whether $v_i$ lies on at least one TACV-validated attack path in the current window, and \emph{Cross-Window Persistence} $PS_i$, the fraction of time windows in which $v_i$ (or its associated vulnerability) remains present and exploitable, capturing chronic exposure rather than momentary risk.
+Let alert $a_i$ map to node $v_i \in V_t$ (where $V_t$ is the vertex set of attack graph snapshot $G_t^a = (V_t, E_t)$) in time window $t$. We compute three structural quantities, each normalized to $[0,1]$, including \emph{Temporal Betweenness Centrality} $BC_i$, the fraction of feasible attack paths in $G_t^a$ passing through $v_i$, capturing how strongly the node mediates attacker movement, \emph{Path-Critical Indicator} $PC_i$, whether $v_i$ lies on at least one TACV-validated attack path in the current window, and \emph{Cross-Window Persistence} $PS_i$, the fraction of time windows in which $v_i$ (or its associated vulnerability) remains present and exploitable, capturing chronic exposure rather than momentary risk.
 
 \subsubsection{Composite Score Formulation}
 We define the Structural Triage Score (STS) as a convex combination of the three structural components:
@@ -180,7 +183,7 @@ We define the Structural Triage Score (STS) as a convex combination of the three
 STS(a_i) = \beta \cdot BC_i + \gamma \cdot PC_i + \delta \cdot PS_i, \quad \beta + \gamma + \delta = 1.
 \label{eq:sts}
 \end{equation}
-By construction, $STS(a_i) \in [0,1]$. An alert receives a high score if it maps to a node that sits on many feasible attack paths ($BC_i$ high), lies on a currently validated path ($PC_i = 1$), and remains persistent across time windows ($PS_i$ high). Crucially, STS is computed independently of alert severity $\sigma_i$. Severity is retained only as a separate baseline metric ($S_i'$, min-max normalized CVSS~\cite{first_cvss_v31}) to evaluate how much of STS's variation is explained by severity alone. It is deliberately omitted from Eq.~\ref{eq:sts}, as adding severity into STS would introduce circular reasoning into the evaluation. The weights $\beta, \gamma, \delta$ can be set empirically or learned from historical analyst investigation outcomes, and we use uniform weighting ($\beta = 1/3, \gamma = 1/3, \delta = 1/3$) in our evaluation.
+By definition, $STS(a_i) \in [0,1]$. An alert receives a high score if it maps to a node that sits on many feasible attack paths ($BC_i$ high), lies on a currently validated path ($PC_i = 1$), and remains persistent across time windows ($PS_i$ high). Crucially, STS is computed independently of alert severity $\sigma_i$. Severity is retained only as a separate baseline metric to evaluate how much of STS's variation is explained by severity alone. It is deliberately omitted from Eq.~\ref{eq:sts}, as adding severity into STS would introduce circular reasoning into the evaluation. The weights $\beta, \gamma, \delta$ allow SOC operators to tune the relative importance of path mediation, active path validation, and chronic exposure, or to learn them from historical analyst investigation outcomes. In our evaluation, we assign equal uniform weighting ($\beta = \gamma = \delta = 1/3$) to establish a neutral baseline and evaluate STS's intrinsic structural signal without parameter-tuning bias.
 
 \subsection{Temporal Blind Spot Quantification (TBSQ)}
 \label{sec:tbsq}
@@ -188,28 +191,28 @@ By construction, $STS(a_i) \in [0,1]$. An alert receives a high score if it maps
 TACV and STS both operate on alerts generated by the IDS, but neither module determines whether portions of the evolving attack surface go unobserved entirely. Attackers frequently exploit paths that generate few or no alerts due to incomplete sensor placement, encrypted traffic, misconfiguration, or detector blind spots. Therefore, the absence of an alert is not evidence of the absence of attacker activity. TBSQ quantifies monitoring coverage with respect to \emph{feasible attack paths} in the TAG, rather than raw sensor counts.
 
 \subsubsection{Blind Spot Definition}
-For window $t$ with attack graph $G_t^a = (V_t, E_t)$, let $A_t$ be the validated alerts (from TACV) observed during that window. A node $v \in V_t$ is \emph{observed} if some alert in $A_t$ maps to it, where the observed set is $O_t = \{v \in V_t \mid \exists\, a_i \in A_t \text{ mapped to } v\}$, and the blind spot set is $B_t = V_t \setminus O_t$.
+For time instance $t$ with attack graph $G_t^a = (V_t, E_t)$, let $A_t$ be the validated alerts (from TACV) observed during time window $w_t$. A node $v \in V_t$ is \emph{observed} if at least one alert in $A_t$ maps to it, forming the observed set $O_t$. Nodes that receive no alerts constitute the unmonitored blind spot set, $B_t = V_t \setminus O_t$.
 
 \subsubsection{Path-Critical Blind Spots}
-Not every blind spot is equally significant. A blind spot $v \in B_t$ is \emph{path-critical} if it lies on one or more TACV-feasible attack paths in $G_t^a$. We quantify this continuously via a path-criticality score $PC(v) = P(v) / \max_{u \in V_t} P(u)$, where $P(v)$ is the number of feasible attack paths containing $v$, and values near 1 indicate nodes central to many attack paths. \emph{We note as a limitation that in our pruned evaluation topologies, path-critical blind spots coincided with the full blind-spot set in every configuration tested. This occurred due to the aggressive removal of isolated nodes prior to simulation. This binary coincidence should not be assumed to hold in less densely pruned real-world topologies, where $PC(v)$ is expected to discriminate between peripheral and critical gaps.}
+Not every blind spot is equally significant. A blind spot $v \in B_t$ is \emph{path-critical} if it lies on one or more TACV-feasible attack paths in $G_t^a$. We quantify this continuously via a path-criticality score $PC(v) = P(v) / \max_{u \in V_t} P(u)$, where $P(v)$ is the number of feasible attack paths containing $v$, and values near 1 indicate nodes central to many attack paths. In our evaluation topologies, path-critical blind spots coincided with the full blind-spot set in every configuration tested due to the removal of isolated nodes prior to simulation. This binary coincidence should not be assumed to hold in unpruned enterprise topologies, where $PC(v)$ is expected to discriminate between peripheral and critical gaps.
 
-Per-window coverage is $BSR_t = |B_t| / |V_t|$, termed the Blind Spot Ratio, and $Coverage_t = 1 - BSR_t$, tracked independently per window since coverage shifts as the network evolves. Summarized over the full observation period, the Temporal Blind Spot Index is $TBSI = \frac{1}{T}\sum_{t=1}^{T} BSR_t$, where a lower $TBSI$ indicates the IDS consistently observes a larger fraction of the evolving attack surface. Since remediation resources are limited, blind spots are ranked by a Blind Spot Priority Score, $BSP(v) = \alpha \cdot PC(v) + \beta \cdot BC(v)$, $\alpha + \beta = 1$, combining path criticality with temporal betweenness centrality. Nodes with the highest $BSP(v)$ are attack-path bottlenecks that remain poorly monitored, and constitute the highest-priority candidates for new sensor deployment. The output of TBSQ is: the blind spot set, the path-critical subset, per-window coverage, the overall $TBSI$, and a ranked remediation list.
+Per-window coverage is $BSR_t = |B_t| / |V_t|$, termed the Blind Spot Ratio, and $Coverage_t = 1 - BSR_t$, tracked independently per window since coverage shifts as the network evolves. Summarized over the full observation period, the Temporal Blind Spot Index is $TBSI = \frac{1}{T}\sum_{t=1}^{T} BSR_t$, where a lower $TBSI$ indicates the IDS consistently observes a larger fraction of the evolving attack surface. Since remediation resources are limited, blind spots are ranked by a Blind Spot Priority Score, $BSP(v) = \alpha \cdot PC(v) + \beta \cdot BC(v)$, $\alpha + \beta = 1$, combining path criticality with temporal betweenness centrality. Nodes with the highest $BSP(v)$ are attack-path bottlenecks that remain poorly monitored, and constitute the highest-priority candidates for new sensor deployment. The output of TBSQ includes the blind spot set, the path-critical subset, per-window coverage, the overall $TBSI$, and a ranked remediation list.
 
 \subsection{Computational Complexity}
 \label{sec:complexity}
 
-Let $n = |V_t|$, $m = |E_t|$, $T$ be the number of time windows, and $N_A$ be total IDS alerts. Preprocessing each window's MulVAL attack graph costs $O(T(f(n,m) + n + m))$ offline. Online alert correlation (TACV) generates candidate pairs using a temporal threshold $\Delta$ ($P \ll N_A^2$) and performs graph traversals in $O(N_A^2 + P(n+m))$. Triage (STS) computes severity in $O(N_A)$ and betweenness centrality (Brandes' algorithm~\cite{Brandes2001,bus2020}) in $O(nm)$ per window, yielding an amortized $O(N_A)$ per-alert scoring overhead. Coverage analysis (TBSQ) identifies blind spots and ranks remediation priority via sorting in $O(n \log n)$. Combined pipeline complexity is $O(T(f(n,m)+n+m) + N_A^2 + P(n+m) + nm + n\log n)$. In our implementation, offline graph construction takes $< 2.5$\,s per window, and online TACV traversal requires $< 15$\,ms per candidate alert pair on a standard workstation, maintaining low operational latency for real-time IDS deployment.
+Let $n = |V_t|$, $m = |E_t|$, $T$ be the number of time windows, and $N_A$ be total IDS alerts. Online alert correlation (TACV) generates candidate pairs using a temporal threshold $\Delta$ ($P \ll N_A^2$) and performs graph traversals in $O(N_A^2 + P(n+m))$. Triage (STS) computes severity in $O(N_A)$ and betweenness centrality (Brandes' algorithm~\cite{Brandes2001,bus2020}) in $O(nm)$ per window, yielding an amortized $O(N_A)$ per-alert scoring overhead. Coverage analysis (TBSQ) identifies blind spots and ranks remediation priority via sorting in $O(n \log n)$. The combined computational complexity is $O(N_A^2 + P(n+m) + nm + n\log n)$, maintaining low operational overhead for real-time IDS deployment.
 
-\section{Experimental Setup}
+\section{Evaluation Setup}
 \label{sec:setup}
 
 We evaluate TAG-IDS on simulated enterprise network topologies across four discrete time windows ($T=4$) at $n = 20, 30, 40$ hosts to quantify operational performance against standard correlators.
 
 \subsection{Network Simulation and Threat Model}
-For each host size, we generate a TAG integrating real CVE data and simulate a sparse IDS alert stream with 60\% sparsity. We assume a remote attacker progressing laterally along reachable exploit paths. Lateral movement requires a temporally valid path in the time window in which it occurs. Out-of-band channels and zero-days are excluded as detailed in the limitations section.
+For each host size, we generate a TAG integrating real CVE data and simulate a sparse IDS alert stream with 60\% sparsity. We assume a remote attacker progressing laterally along reachable exploit paths. Lateral movement requires a temporally valid path in the time window in which it occurs.
 
 \subsection{Baselines and Evaluation Metrics}
-We compare TAG-IDS against time-proximity correlators spanning 15, 30, 60, and 120 minutes, CVSS severity thresholds spanning LOW, MEDIUM, HIGH, and CRITICAL levels, and a \emph{Static TAG Snapshot} ablation baseline, which collapses all four time windows into a single merged graph. The Static TAG Snapshot ablation evaluates structural reachability over an aggregated static attack graph $G_{\text{static}} = \bigcup_{t=1}^T G_t^a$ without temporal windowing, isolating the role of temporal path ordering from static structural reachability. This ablation reflects the operational reachability reasoning of static Attack Graph IDS approaches, such as Roschke et al.~\cite{Roschke2010} and Angelini et al.~\cite{Angelini2019}, when evaluated over an unwindowed topology. The primary metrics are: (1)~\emph{False Correlation Rate (FCR)}, (2)~\emph{STS--Severity $r^2$}, (3)~\emph{Blind Spot Ratio (BSR)}, and (4)~\emph{Exact-match source recovery}.
+We compare TAG-IDS against three baseline categories: (i)~time-proximity correlators across 15, 30, 60, and 120-minute windows, (ii)~CVSS severity baselines across LOW, MEDIUM, HIGH, and CRITICAL levels, and (iii)~a \emph{Static TAG Snapshot} comparison baseline that collapses all four time windows into a single merged graph $G_{\text{static}} = \bigcup_{t=1}^T G_t^a$. The static snapshot baseline evaluates structural reachability without temporal windowing, isolating the role of temporal path ordering from static graph structure alone. This comparison reflects the operational reachability reasoning of static Attack Graph IDS approaches, such as Roschke et al.~\cite{Roschke2010} and Angelini et al.~\cite{Angelini2019}, when evaluated over an unwindowed topology. The primary evaluation metrics are (1)~\emph{False Correlation Rate (FCR)}, (2)~\emph{STS--Severity $r^2$}, (3)~\emph{Blind Spot Ratio (BSR)}, and (4)~\emph{Exact-match source recovery}.
 
 \section{Empirical Evaluation}
 \label{sec:evaluation}
@@ -233,7 +236,7 @@ $n$ & Pairs & Imposs.\,\% & Best-BL FCR & Static FCR & STS $r^2$ & Avg.\ BSR \\
 \end{table}
 
 \subsection{Structural Triage Score (STS)}
-Severity explains only a small, practically negligible fraction of structural risk variance ($r^2$ between 0.0\% and 10.2\%, mean 4.3\%, $p < 0.01$). Ranking alerts by STS reveals that 20--28\% of alerts are \emph{promoted}, such as a MEDIUM-severity alert on a path bottleneck promoted to top rank, and 57--68\% are \emph{demoted}, such as a CRITICAL-severity alert on an isolated host, as illustrated in Figure~\ref{fig:sts-scatter} and Table~\ref{tab:sts-example}. Severity-only triage systematically misallocates analyst attention toward dead-end hosts.
+Severity explains only a small, practically negligible fraction of structural risk variance ($r^2$ between 0.0\% and 10.2\%, mean 4.3\%, $p < 0.01$). Ranking alerts by STS reveals that 20--28\% of alerts are \emph{promoted}, such as a MEDIUM-severity alert on a path bottleneck promoted to top rank, and 57--68\% are \emph{demoted}, such as a CRITICAL-severity alert on an isolated host, as illustrated in Figure~\ref{fig:sts-scatter} and Table~\ref{tab:sts-example}. This shows that relying on severity alone directs analyst attention toward high-severity alerts on isolated hosts that lead nowhere, while missing lower-severity alerts on critical attack paths.
 
 \begin{table}[t]
 \centering
@@ -252,22 +255,22 @@ Demoted alert & CRITICAL & 1 & 61 \\
 
 \begin{figure}[ht!]
 \centering
-\vspace{-0.4em}
-\includegraphics[width=0.55\textwidth]{Figures/fig3_sts_scatter.png}
-\vspace{-0.4em}
+\vspace{-0.5em}
+\includegraphics[width=0.58\textwidth]{Figures/fig3_sts_scatter.png}
+\vspace{-0.5em}
 \caption{Rank divergence scatter plot comparing nominal CVSS rank against Structural Triage Score (STS) rank ($r^2 = 10.2\%$). Points above the diagonal indicate promoted alerts, while points below indicate demoted alerts.}
 \label{fig:sts-scatter}
 \vspace{-0.4em}
 \end{figure}
 
 \subsection{Temporal Blind Spot Quantification (TBSQ)}
-Average IDS coverage ranged from 58.5\% to 66.1\% across configurations (mean 62.6\%, Table~\ref{tab:summary}). Coverage shifts dynamically across time windows due to host churn ($BSR_t$ ranging from 30.0\% to 45.0\% across configurations, Figure~\ref{fig:bsr-trend}), proving that single-snapshot audits misrepresent monitoring effectiveness. In our densely pruned proof-of-concept topologies, 100\% of blind spots coincided with path-critical nodes, so $PC(v)$ did not provide additional discriminative filtering in this specific evaluation setup, but $BSP(v)$ provides the formal mechanism to prioritize coverage gaps as network scale grows.
+Average IDS coverage ranged from 58.5\% to 66.1\% across configurations (mean 62.6\%, Table~\ref{tab:summary}). Coverage shifts dynamically across time windows due to host churn ($BSR_t$ ranging from 30.0\% to 45.0\% across configurations, Figure~\ref{fig:bsr-trend}), proving that single-snapshot audits misrepresent monitoring effectiveness. In the evaluated network topologies, all blind spots coincided with path-critical nodes because disconnected isolated hosts were filtered during topology preprocessing. Consequently, $PC(v)$ did not provide additional discriminative filtering in these specific configurations, though $BSP(v)$ provides the formal mechanism to prioritize coverage gaps in larger, unpruned networks.
 
 \begin{figure}[ht!]
 \centering
-\vspace{-0.4em}
-\includegraphics[width=0.55\textwidth]{Figures/fig4_bsr_trend.png}
-\vspace{-0.4em}
+\vspace{-0.5em}
+\includegraphics[width=0.60\textwidth]{Figures/fig4_bsr_trend.png}
+\vspace{-0.5em}
 \caption{Temporal variation of Blind Spot Ratio ($BSR_t$) across time windows $w_0$--$w_3$, demonstrating dynamic coverage shifts.}
 \label{fig:bsr-trend}
 \vspace{-0.4em}
@@ -278,33 +281,34 @@ Average IDS coverage ranged from 58.5\% to 66.1\% across configurations (mean 62
 \subsection{Temporal Alert Chain Validation (TACV)}
 TACV classifies candidate alert pairs into \emph{Valid}, \emph{Impossible}, and \emph{Ambiguous} (Figure~\ref{fig:tag-example}). Across configurations, valid-chain rates ranged from 15.9\% at $n=20$ to 23.1\% at $n=30$, while ambiguous chains ranged from 13.1\% to 32.0\% with a mean of 22.3\%.
 
-No independent heuristic baseline achieved an FCR below 42.3\% in any configuration, yielding a mean best-baseline FCR of 57.9\% across configurations (range 42.3\%--70.3\%, with 95\% CI [58.7\%, 81.0\%] for $n=20$). Mean baseline FCRs across configurations ranged from 58.0\% (15-min and 30-min windows) to 59.2\% (LOW severity and 120-min window), 59.5\% (60-min window), 60.0\% (HIGH severity), 61.5\% (MEDIUM severity), 75.0\% (CRITICAL severity), and 58.7\% for the Static Snapshot (Figure~\ref{fig:fcr-bar}). TAG-IDS achieves \textbf{0\% FCR by construction} as a structural reachability oracle on the modeled attack surface. Comparing heuristic baselines against this structural oracle quantifies the false correlation floor of non-structural methods, demonstrating that heuristic correlators falsely link 42.3\%--70.3\% of physically impossible alert pairs. Collapsing temporal ordering into a static snapshot yields a 58.7\% FCR, spanning 43.4\% to 71.0\%, confirming that \emph{temporal path ordering}, rather than static graph structure alone, eliminates false correlation. At $n=20$ and $n=40$, static snapshot FCR equals the impossible-chain rate exactly, as all impossible pairs were disconnected even in the merged static graph $G_{\text{static}}$; at $n=30$, static snapshot FCR is slightly lower (43.4\% vs. 44.9\%), as a small fraction of candidate pairs are reachable in the merged static graph despite being temporally disconnected across windows. Under 60\% alert sparsity, temporal weighting improves median source localization distance, achieving an exact-match recovery rate of 11.5\%--37.9\% (mean 23.4\%).
+No independent heuristic baseline achieved an FCR below 42.3\% in any configuration, yielding a mean best-baseline FCR of 57.9\% across configurations (range 42.3\%--70.3\%, with 95\% CI [58.7\%, 81.0\%] for $n=20$). Mean baseline FCRs across configurations ranged from 58.0\% (15-min and 30-min windows) to 59.2\% (LOW severity and 120-min window), 59.5\% (60-min window), 60.0\% (HIGH severity), 61.5\% (MEDIUM severity), 75.0\% (CRITICAL severity), and 58.7\% for the Static Snapshot (Figure~\ref{fig:fcr-bar}). TAG-IDS achieves \textbf{0\% FCR by design}, because TACV strictly rejects any alert pair that lacks a physically reachable attack path in the network topology. Comparing heuristic baselines against this structural ground truth quantifies the false correlation floor of non-structural methods, demonstrating that heuristic correlators falsely link 42.3\%--70.3\% of physically impossible alert pairs. Collapsing temporal ordering into a static snapshot yields a 58.7\% FCR, ranging from 43.4\% to 71.0\%, confirming that \emph{temporal path ordering}, rather than static graph structure alone, eliminates false correlation. At $n=20$ and $n=40$, static snapshot FCR equals the impossible-chain rate exactly, as all impossible pairs were disconnected even in the merged static graph $G_{\text{static}}$. At $n=30$, static snapshot FCR is slightly lower (43.4\% vs. 44.9\%), as a small fraction of candidate pairs are reachable in the merged static graph despite being temporally disconnected across windows. Under 60\% alert sparsity, temporal weighting improves median source localization distance, achieving an exact-match recovery rate of 11.5\%--37.9\% (mean 23.4\%).
 
-To evaluate robustness under imperfect monitoring, we conduct a telemetry degradation ablation over 100 randomized trials by dropping 10\%, 20\%, and 30\% of topology edges relative to ground truth (Table~\ref{tab:telemetry-degradation}). Because edge removal can only prune reachable paths ($E_{\text{degraded}} \subseteq E_{\text{full}}$) without hallucinating new ones, TAG-IDS maintains \textbf{0.0\% FCR} across all degradation levels. Instead, telemetry loss induces under-correlation (Missed Correlation Rate, MCR), rising from 0.0\% at 100\% fidelity to $26.3\%\pm9.6\%$ at 90\% fidelity, $50.6\%\pm12.3\%$ at 80\% fidelity, and $66.6\%\pm11.3\%$ at 70\% fidelity ($F_1$ score scaling from 1.000 to 0.490), proving that TAG-IDS errs conservatively under telemetry loss rather than generating false correlations.
+To evaluate robustness when network logging is incomplete (e.g., missing sensor logs or unmonitored network segments), we simulate log data loss by randomly dropping 10\%, 20\%, and 30\% of topology edges relative to the ground-truth host-level graph over 100 randomized trials (Table~\ref{tab:telemetry-degradation}). This analysis is distinct from host-level graph pruning. Because missing network logs can only omit existing reachability paths ($E_{\text{degraded}} \subseteq E_{\text{full}}$) without hallucinating non-existent ones, TAG-IDS maintains \textbf{0.0\% FCR} across all loss levels. Instead, log data loss induces under-correlation (Missed Correlation Rate, MCR), rising from 0.0\% at 100\% log fidelity to $26.3\%\pm9.6\%$ at 90\% fidelity, $50.6\%\pm12.3\%$ at 80\% fidelity, and $66.6\%\pm11.3\%$ at 70\% fidelity ($F_1$ score scaling from 1.000 to 0.490), proving that TAG-IDS errs conservatively when network visibility is incomplete rather than generating false correlations.
 
 \begin{table}[t]
 \centering
-\caption{TAG-IDS performance under telemetry degradation (100 trials).}
+\caption{Impact of incomplete network logging across 100 trials (mean $\pm$ std). False Correlation Rate (FCR) remains 0.0\% across all fidelity levels.}
 \label{tab:telemetry-degradation}
 \footnotesize
-\begin{tabular}{ccccc}
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccc}
 \toprule
-Degradation Rate & Fidelity & FCR Mean\,$\pm$\,SD & MCR Mean\,$\pm$\,SD & F1 Score \\
+\textbf{Fidelity Level} & \textbf{MCR (\%)} & \textbf{Precision} & \textbf{$F_1$ Score} \\
 \midrule
-0\% (Baseline) & 100\% & 0.0\%\,$\pm$\,0.0\% & 0.0\%\,$\pm$\,0.0\% & 1.000 \\
-10\% & 90\% & 0.0\%\,$\pm$\,0.0\% & 26.3\%\,$\pm$\,9.6\% & 0.845 \\
-20\% & 80\% & 0.0\%\,$\pm$\,0.0\% & 50.6\%\,$\pm$\,12.3\% & 0.652 \\
-30\% & 70\% & 0.0\%\,$\pm$\,0.0\% & 66.6\%\,$\pm$\,11.3\% & 0.490 \\
+100\% (Full Logging) & 0.0\% & 1.000 & 1.000 \\
+90\% (10\% Log Loss) & $26.3\%\pm9.6\%$ & 1.000 & $0.852\pm0.065$ \\
+80\% (20\% Log Loss) & $50.6\%\pm12.3\%$ & 1.000 & $0.648\pm0.111$ \\
+70\% (30\% Log Loss) & $66.6\%\pm11.3\%$ & 1.000 & $0.490\pm0.114$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[ht!]
 \centering
-\vspace{-0.4em}
+\vspace{-0.5em}
 \includegraphics[width=0.60\textwidth]{Figures/fig5_fcr_comparison.png}
-\vspace{-0.4em}
-\caption{Mean False Correlation Rate (FCR) across baselines, static snapshot ablation, and TAG-IDS. Each bar represents the simple unweighted mean FCR of that baseline across the three configurations ($n=20, 30, 40$), as computed from the underlying alert pair evaluation sets detailed in the released reproducibility artifact. TAG-IDS achieves 0\% FCR by construction (structural oracle guarantee).}
+\vspace{-0.5em}
+\caption{Mean False Correlation Rate (FCR) across baselines, static snapshot baseline, and TAG-IDS. Each bar represents the simple unweighted mean FCR of that baseline across the three configurations ($n=20, 30, 40$), as computed from the underlying alert pair evaluation sets. TAG-IDS achieves 0\% FCR by design because TACV strictly enforces path reachability.}
 \label{fig:fcr-bar}
 \vspace{-0.4em}
 \end{figure}
@@ -314,15 +318,15 @@ Single-seed evaluation results show impossible-chain rates of 71.0\% at $n=20$, 
 
 \section{Limitations and Threats to Validity}\label{sec:limitations}
 
-Our evaluation relies on simulated enterprise topologies (20, 30, and 40 hosts) with alert pair sample sizes of 60 to 78, yielding confidence intervals for individual baseline point-estimates (e.g., 95\% CI [58.7\%, 81.0\%] for $n$=20). Point magnitudes reflect single-seed proof-of-concept runs. Advanced ILP sensor optimization and Markovian belief propagation are deferred to a journal extension. Impossible-chain rates reflect random topological seed variance in single-seed generation rather than a monotonic scaling law. The exact match between impossible-chain rates and static snapshot FCR at $n=20$ (71.0\%) and $n=40$ (61.7\%) stems from complete topological disconnection in those realizations; at $n=30$ (44.9\% vs. 43.4\%), static reachability preserves paths that are temporally invalid across windows. Additionally, 100\% path-critical blind spot overlap occurred due to aggressive topological pruning. Under partial telemetry loss (Table~\ref{tab:telemetry-degradation}), missing data induces under-correlation (MCR up to 66.6\% at 30\% degradation) while preserving 0.0\% FCR, confirming that TAG-IDS fails safe under incomplete telemetry.
+Our evaluation relies on simulated enterprise topologies (20, 30, and 40 hosts) with alert pair sample sizes of 60 to 78, yielding confidence intervals for individual baseline point-estimates (e.g., 95\% CI [58.7\%, 81.0\%] for $n$=20). Point magnitudes reflect single-seed initial evaluation runs. Impossible-chain rates reflect random topological seed variance in single-seed generation rather than a monotonic scaling law. The exact match between impossible-chain rates and static snapshot FCR at $n=20$ (71.0\%) and $n=40$ (61.7\%) stems from complete topological disconnection in those realizations. At $n=30$ (44.9\% vs. 43.4\%), static reachability preserves paths that are temporally invalid across windows. Additionally, 100\% path-critical blind spot overlap occurred due to pre-simulation topology filtering. When network logging is incomplete (Table~\ref{tab:telemetry-degradation}), missing log data causes TAG-IDS to miss some valid attack links (Missed Correlation Rate up to 66.6\% at 30\% log loss), but it never generates false correlations (0.0\% FCR), proving that the system fails safely under missing data.
 
 \section{Conclusion}\label{sec:conclusion}
 
-In this paper, we presented TAG-IDS, a context-aware intrusion analysis framework that uses Temporal Attack Graphs for alert validation, prioritization, and coverage assessment. Across three network configurations (20, 30, and 40~hosts), we demonstrated that standard time-proximity and severity-based correlation heuristics consistently fail to distinguish between structurally feasible attack progression and coincidental network noise, resulting in False Correlation Rates averaging 57.9\% even for the best-performing baseline in each configuration (range 42.3\%--70.3\%). By enforcing temporal reachability constraints, TAG-IDS eliminates false correlation entirely (0\% FCR by construction). Our ablation study confirmed that this improvement is driven by \emph{temporal path ordering}, as collapsing the temporal dimension raised the FCR to a mean of 58.7\%. Furthermore, CVSS severity was shown to explain only 0.0\%--10.2\% (mean 4.3\%) of true structural risk.
+In this paper, we presented TAG-IDS, a context-aware intrusion analysis system that uses Temporal Attack Graphs for alert validation, prioritization, and coverage assessment. Across three network configurations (20, 30, and 40~hosts), we demonstrated that standard time-proximity and severity-based correlation heuristics consistently fail to distinguish between structurally feasible attack progression and coincidental network noise, resulting in False Correlation Rates averaging 57.9\% even for the best-performing baseline in each configuration (range 42.3\%--70.3\%). By enforcing temporal reachability constraints, TAG-IDS eliminates false correlation entirely (0\% FCR by design). Our evaluation confirmed that this improvement is driven by \emph{temporal path ordering}, as collapsing the temporal dimension raised the FCR to a mean of 58.7\%. Furthermore, CVSS severity was shown to explain only 0.0\%--10.2\% (mean 4.3\%) of true structural risk.
 
 \section{Future Work}\label{sec:future-work}
 
-Future work will expand this framework into a journal extension by incorporating Integer Linear Programming for optimal sensor placement, Markovian belief propagation for attacker localization under severe observability constraints, and empirical evaluation on production enterprise datasets such as DARPA OpTC~\cite{darpa_optc}. The simulation framework and evaluation scripts used in this work will be released as a reproducibility artifact upon acceptance.
+Next steps include testing TAG-IDS on larger networks with hundreds of hosts to evaluate performance in higher-density enterprise environments. We also plan to introduce new security metrics that optimize sensor placement and help security teams locate attackers even when network monitoring is incomplete. Finally, integrating real-time threat intelligence feeds will allow TAG-IDS to adjust host risk scores dynamically as new vulnerabilities are discovered.
 
 \bibliographystyle{splncs04}
 \bibliography{Reference}
