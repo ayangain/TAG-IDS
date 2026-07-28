@@ -219,11 +219,6 @@ Not every blind spot is equally significant. A blind spot $v \in B_t$ is \emph{p
 \end{itemize}
 In our evaluation topologies, path critical blind spots coincided with the full blind spot set due to pre-simulation filtering of isolated nodes. Nodes with the highest $BSP(v)$ are high-priority candidates for new sensor deployment.
 
-\subsection{Computational Complexity}
-\label{sec:complexity}
-
-Let $n = |V_t|$, $m = |E_t|$, $\tau$ be the number of time windows, and $N_A$ be total IDS alerts. Online alert correlation (TACV) generates candidate alert pairs using a temporal threshold $\Delta$ ($P \ll N_A^2$) and performs graph traversals in $O(N_A^2 + P(n+m))$. Triage (STS) computes severity in $O(N_A)$ and betweenness centrality (Brandes' algorithm) in $O(nm)$ per window, yielding an amortized $O(N_A)$ per alert scoring overhead. Coverage analysis (TBSQ) identifies blind spots and ranks remediation priority via sorting in $O(n \log n)$. The combined computational complexity is $O(N_A^2 + P(n+m) + nm + n\log n)$, maintaining low operational overhead for real time IDS deployment.
-
 \section{Evaluation Setup}
 \label{sec:setup}
 
