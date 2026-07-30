@@ -37,10 +37,13 @@
 %                                     \toctitle is used
 %
 % === DOUBLE-BLIND SUBMISSION VERSION ===
-% Uncomment the block below for camera-ready
-\author{Ayan Gain\inst{1} \orcidID{0009-0009-2629-0927}\and Mridul Sankar Barik\inst{1} \orcidID{0000-0001-6322-5336}}
-\institute{Jadavpur University, Kolkata, India\\
-\email{ayan.gain2010@gmail.com, mridulsankar.barik@jadavpuruniversity.in}}
+% Uncomment the camera-ready block for final version
+%\author{Ayan Gain\inst{1} \orcidID{0009-0009-2629-0927}\and Mridul Sankar Barik\inst{1} \orcidID{0000-0001-6322-5336}}
+%\institute{Jadavpur University, Kolkata, India\\
+%\email{ayan.gain2010@gmail.com, mridulsankar.barik@jadavpuruniversity.in}}
+\author{Anonymous Author(s)}
+\institute{Anonymous Institution\\
+\email{anonymous@domain.com}}
 
 
 \maketitle              % typeset the title of the contribution
@@ -53,7 +56,7 @@ Security operations centers routinely rely on simple correlation rules, such as 
 %
 \section{Introduction}
 
-Modern security operations centers (SOCs) rely on network and host intrusion detection system (IDS) sensors deployed across enterprise infrastructure, generating thousands of daily security alerts for SIEM\footnote{security information and event management} platforms, causing severe analyst fatigue. To manage this volume, correlators rely on sliding time windows, event grouping, and static severity scores \cite{10.1145/586110.586144,1366134,s22041494}. However, time based correlation ignores network structure. Alerts occurring close together in time on unrelated hosts are falsely linked, while multi stage attack campaigns extending over longer periods get fragmented and missed.
+Modern security operations centers (SOCs) rely on network and host intrusion detection system (IDS) sensors deployed across enterprise infrastructure. These sensors generate thousands of daily security alerts for SIEM\footnote{security information and event management} platforms, causing severe analyst fatigue. To manage this volume, correlators rely on sliding time windows, event grouping, and static severity scores \cite{10.1145/586110.586144,1366134,s22041494}. However, time based correlation ignores network structure. Alerts occurring close together in time on unrelated hosts are falsely linked, while multi stage attack campaigns extending over longer periods get fragmented and missed.
 
 At the same time, enterprise networks evolve rapidly. Cloud orchestration, containerization, and continuous patching cause host availability and firewall policies to change constantly. While attack graphs (AGs) enumerate multi step exploit paths \cite{1004377,6263942}, traditional AG models evaluate security posture over a single static snapshot, failing to capture the chronological sequence of lateral movement. Although dynamic systems research provides theoretical foundations for time varying graphs \cite{Casteigts2012,Holme}, practical security metrics capable of validating real time alert reachability over evolving topologies remain absent.
 
@@ -65,7 +68,7 @@ To address these challenges, we present \textbf{TAG-IDS}, an operational system 
 	\item \textbf{Empirical Evaluation}: Validating TAG-IDS across 20, 30, and 40 host configurations, showing that conventional correlators suffer a high mean false correlation rate of 57.9\%.
 \end{enumerate}
 
-The empirical evaluation validates these metrics on synthetic networks of moderate scale, ranging from 20 to 40 hosts. Because TACV, STS, and TBSQ are defined independently of network scale, this evaluation demonstrates the framework's validity at moderate scale, with empirical performance under larger enterprise topologies reserved for future work.
+The empirical evaluation validates these metrics on synthetic networks of moderate scale, ranging from 20 to 40 hosts. Because TACV, STS, and TBSQ are defined independently of network scale, this evaluation demonstrates the framework's validity, with empirical performance under larger enterprise topologies reserved for future work.
 
 This paper is organized as follows. Section~\ref{sec:related-work} reviews related work. Section~\ref{sec:model} formalizes the TAG-IDS architecture. Section~\ref{sec:setup} describes the evaluation setup. Section~\ref{sec:evaluation} presents empirical results. Section~\ref{sec:limitations} discusses limitations. Section~\ref{sec:conclusion} concludes the paper, followed by Section~\ref{sec:future-work} on future work.
 
